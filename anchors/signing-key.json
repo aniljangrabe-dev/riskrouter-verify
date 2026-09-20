@@ -1,0 +1,10 @@
+{
+  "key_id": "dd4b4b394c95586a",
+  "algorithm": "ECDSA_P256_SHA256",
+  "public_key": {
+    "kty": "EC",
+    "crv": "P-256",
+    "x": "R1to1Dqm2VfNqL9TZWxmyX3p7zMs-I9EVtfacZhx-rw",
+    "y": "zkoYfIdtSENdLv1UMyxs_i_tjQb3A5kZI6JYoP8BKNc"
+  }
+}

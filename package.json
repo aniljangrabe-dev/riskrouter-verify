@@ -1,0 +1,23 @@
+{
+  "name": "riskrouter-verify",
+  "version": "1.0.0",
+  "private": false,
+  "description": "Independent, offline verification for RiskRouter's audit ledger. No dependencies, contacts nothing.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Anil Jangra <anil@riskrouter.eu>",
+  "homepage": "https://riskrouter.eu",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aniljangrabe-dev/riskrouter-verify"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "verify:ledger": "node tools/verify-ledger.mjs",
+    "verify:attestation": "node tools/verify-attestation.mjs",
+    "verify:anchors": "node tools/verify-anchors.mjs",
+    "smoke": "node tools/verify-attestation.mjs anchors/attestation-2026-09-13.json"
+  }
+}
