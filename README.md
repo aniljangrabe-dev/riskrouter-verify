@@ -1,10 +1,12 @@
 # riskrouter-verify
 
 Independent, offline verification for [RiskRouter](https://riskrouter.eu)'s audit ledger — the
-tamper-evident record of every insurance quote it prices. This repository holds nothing but the
-verification tools and the published proof material. It is separate from RiskRouter's own
-(private) application repository on purpose: the whole point of an independent verifier is that
-it does not depend on RiskRouter staying operational, staying honest, or staying in business.
+tamper-evident record of every insurance quote it prices. See
+[riskrouter.eu/trust](https://riskrouter.eu/trust) for the full argument this repository exists to
+back up. This repository holds nothing but the verification tools and the published proof
+material. It is separate from RiskRouter's own (private) application repository on purpose: the
+whole point of an independent verifier is that it does not depend on RiskRouter staying
+operational, staying honest, or staying in business.
 
 **If RiskRouter disappears tomorrow, this repository still lets you prove what it told you.**
 
