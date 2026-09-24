@@ -29,10 +29,11 @@ gap, and both are here:
    their private repository, their database, or the company itself were gone or compromised, the
    verification logic and the published proofs here are not.
 
-None of the three scripts below share a single line of code with the server that produces the
-ledger or the signature. They read a file you already have and a public key you already have, and
-they contact nothing. Agreement between the two is evidence; it would not be if they were the same
-code checking itself.
+None of the tools below shares a single line of code with the server that produces the ledger or
+the signature. They read a file you already have and a public key you already have, and they
+contact nothing. Agreement between them and the server is evidence; it would not be if they were
+the same code checking itself. The Python verifier shares no code with the JavaScript tools either,
+so two independent implementations have to reach the same verdict.
 
 ## What's here
 
@@ -43,11 +44,14 @@ tools/verify-attestation.mjs   checks a saved attestation's signature against th
 tools/entry-proof.mjs          cuts a single-entry proof from an export, to show one quote only
 tools/keyring.mjs              picks the published key by its id, so old attestations keep verifying
 tools/verify-anchors.mjs       checks a ledger against every attestation RiskRouter has published
+tools/python/riskrouter_verify.py
+                               the same checks written separately in Python, including its own
+                               P-256 signature check; also verifies evidence-log (v2) proofs
 anchors/                       the public key, and every attestation and timestamp proof so far
 ```
 
-Each script is plain Node.js — no dependencies, nothing to `npm install`. Run any of them with
-`node <path> --help`-style usage shown by running it with no arguments.
+Nothing to install: the Node tools need only Node 18 or later, and the Python verifier only
+Python 3's standard library. Run any of them with no arguments to see its usage.
 
 ## Quick start
 
@@ -63,6 +67,10 @@ curl -H "Authorization: Bearer $RISKROUTER_API_KEY" \
   https://api.riskrouter.eu/api/v1/ledger/export > my-export.json
 node tools/verify-ledger.mjs my-export.json
 node tools/verify-anchors.mjs my-export.json
+
+# The same checks, by a second implementation that shares no code with the first:
+python3 tools/python/riskrouter_verify.py anchors/attestation-2026-09-13.json --key anchors/
+python3 tools/python/riskrouter_verify.py my-export.json --key anchors/
 ```
 
 See `anchors/README.md` for what each check actually proves, what it does not, and the exact
