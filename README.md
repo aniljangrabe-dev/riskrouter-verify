@@ -37,8 +37,11 @@ code checking itself.
 ## What's here
 
 ```
-tools/verify-ledger.mjs        rebuilds every digest in a ledger export and follows the chain
-tools/verify-attestation.mjs   checks a saved attestation's signature against the public key
+tools/verify-ledger.mjs        rebuilds every digest in a ledger export and follows the chain;
+                               --expect-head checks a head you saved earlier is still in it
+tools/verify-attestation.mjs   checks a saved attestation's signature against the published keys
+tools/entry-proof.mjs          cuts a single-entry proof from an export, to show one quote only
+tools/keyring.mjs              picks the published key by its id, so old attestations keep verifying
 tools/verify-anchors.mjs       checks a ledger against every attestation RiskRouter has published
 anchors/                       the public key, and every attestation and timestamp proof so far
 ```

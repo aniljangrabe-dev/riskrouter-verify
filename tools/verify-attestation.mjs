@@ -13,6 +13,11 @@
  *
  *   node tools/verify-attestation.mjs saved-attestation.json
  *   node tools/verify-attestation.mjs saved.json --key anchors/signing-key.json
+ *   node tools/verify-attestation.mjs saved.json --key some/other/keyring-dir
+ *
+ * Without --key, the signature's own key id picks the key from every key we
+ * have published in anchors/ (tools/keyring.mjs), so an attestation saved
+ * before a key rotation still verifies after it.
  *
  * A verified attestation means: this operator asserted this head hash, with
  * this entry count, at this time, and cannot now say otherwise. It does NOT
@@ -23,6 +28,7 @@ import fs from 'node:fs';
 import crypto from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { loadKeyring, pickKey } from './keyring.mjs';
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
@@ -32,14 +38,14 @@ function fail(message) {
 }
 
 const args = process.argv.slice(2);
-const file = args.find((a) => !a.startsWith('--'));
 const keyIndex = args.indexOf('--key');
-const keyFile = keyIndex === -1 ? path.join(ROOT, 'anchors', 'signing-key.json') : args[keyIndex + 1];
+const keyLocation = keyIndex === -1 ? path.join(ROOT, 'anchors') : args[keyIndex + 1];
+const file = args.find((a, i) => !a.startsWith('--') && !(keyIndex > -1 && i === keyIndex + 1));
 
-if (!file) fail('usage: node tools/verify-attestation.mjs <saved-attestation.json> [--key anchors/signing-key.json]');
+if (!file || !keyLocation) fail('usage: node tools/verify-attestation.mjs <saved-attestation.json> [--key <key file or keyring directory>]');
 
 const saved = JSON.parse(fs.readFileSync(file, 'utf8'));
-const published = JSON.parse(fs.readFileSync(keyFile, 'utf8'));
+const ring = loadKeyring(keyLocation);
 
 const attestation = saved.attestation || saved;
 const signature = saved.signature;
@@ -60,8 +66,9 @@ if (signature.signed_payload && signature.signed_payload !== rebuilt) {
   fail(`the signature covers different content than this file claims\n  signed:   ${signature.signed_payload}\n  rebuilt:  ${rebuilt}`);
 }
 
-if (signature.key_id && published.key_id && signature.key_id !== published.key_id) {
-  fail(`signed with key ${signature.key_id}, but the key supplied is ${published.key_id}`);
+const published = pickKey(ring, signature.key_id);
+if (!published) {
+  fail(`signed with key ${signature.key_id || '(unnamed)'}, which is not among the keys supplied (${ring.map((k) => k.key_id || '(unnamed)').join(', ')})`);
 }
 
 const key = crypto.createPublicKey({ key: published.public_key, format: 'jwk' });

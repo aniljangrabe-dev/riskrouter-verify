@@ -19,6 +19,7 @@
  *
  *   node tools/verify-ledger.mjs rows.json
  *   node tools/verify-ledger.mjs rows.json --expect-head <hash recorded earlier>
+ *     (the recorded head may be this file's head or any earlier one in its chain)
  *
  * It reads two shapes:
  *
@@ -191,6 +192,97 @@ export function verifyExport(doc) {
   return { intact: true, checked: skeleton.length, proved, head_hash: head, signed_head: claimed || null };
 }
 
+/* ------------------------------------------------------------ entry proof */
+
+export const ENTRY_PROOF_FORMAT = 'riskrouter-entry-proof|v1';
+
+/**
+ * One entry, cut out of an export, for showing to someone who should see that
+ * quote and no other: the entry in full, the links from it to the head, and
+ * the signed attestation of that head.
+ *
+ * What it proves, precisely. The entry's content produces the digest the
+ * ledger published for its position, and its own prev_hash is part of that
+ * content. The links after it are the ledger's assertion, followed by digest
+ * only, exactly as in an export. They become binding against a signed head:
+ * anyone who later recomputes the full ledger must arrive at that head, and
+ * cannot while this entry is altered or missing. The proof reveals nothing
+ * about any other quote.
+ */
+/**
+ * Where a head recorded earlier sits in this file's chain.
+ *
+ * A head is the digest of the last entry at the moment it was taken, so a
+ * head saved last month is not today's head: it is an earlier link of today's
+ * chain. Returns the chain_index of the entry whose digest it is (0 for the
+ * empty ledger's head), or null when it is not in this chain at all: history
+ * was altered, this is another ledger, or the head is newer than the file.
+ * Only meaningful on a chain already verified intact.
+ */
+export function positionOfHead(doc, wanted) {
+  const head = String(wanted || '').trim().toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(head)) return null;
+  if (head === GENESIS) return 0;
+  const links = Array.isArray(doc) ? doc : (doc.skeleton || doc.rows || []);
+  const hit = links.find((link) => link.row_hash === head);
+  return hit ? Number(hit.chain_index) : null;
+}
+
+export function makeEntryProof(doc, which) {
+  const entries = doc.entries || [];
+  const entry = entries.find((e) => String(e.chain_index) === String(which) || e.id === which);
+  if (!entry) throw new Error(`no entry ${which} among your ${entries.length} entries in this export`);
+  const from = Number(entry.chain_index);
+  const path = [...(doc.skeleton || [])]
+    .sort((a, b) => Number(a.chain_index) - Number(b.chain_index))
+    .filter((link) => Number(link.chain_index) >= from)
+    .map(({ chain_index, row_hash, prev_hash }) => ({ chain_index, row_hash, prev_hash }));
+  return {
+    format: ENTRY_PROOF_FORMAT,
+    note: 'One ledger entry and its links to a signed head. Check it at https://riskrouter.eu/verify or with node tools/verify-ledger.mjs.',
+    entry,
+    path,
+    attestation: doc.attestation || null,
+    ...(doc.signature ? { signature: doc.signature } : {})
+  };
+}
+
+export function verifyEntryProof(doc) {
+  const entry = doc.entry;
+  const path = [...(doc.path || [])].sort((a, b) => Number(a.chain_index) - Number(b.chain_index));
+  if (!entry || path.length === 0) return { intact: false, reason: 'the proof carries no entry or no path to the head' };
+
+  const index = Number(entry.chain_index);
+  if (Number(path[0].chain_index) !== index) {
+    return { intact: false, broken_at: index, reason: 'the path does not start at this entry' };
+  }
+  for (let i = 1; i < path.length; i++) {
+    if (Number(path[i].chain_index) !== index + i) {
+      return { intact: false, broken_at: path[i].chain_index, reason: 'chain index is not contiguous, an entry is missing or duplicated' };
+    }
+    if (path[i].prev_hash !== path[i - 1].row_hash) {
+      return { intact: false, broken_at: path[i].chain_index, reason: 'previous hash does not match the entry before it' };
+    }
+  }
+  const digest = crypto.createHash('sha256').update(canonicalForm(entry, path[0].prev_hash)).digest('hex');
+  if (digest !== path[0].row_hash) {
+    return { intact: false, broken_at: index, reason: 'the entry content does not match the digest published for it' };
+  }
+  const head = path[path.length - 1].row_hash;
+  const last = Number(path[path.length - 1].chain_index);
+  const attestation = doc.attestation;
+  if (!attestation || !attestation.head_hash) {
+    return { intact: false, broken_at: last, reason: 'the proof carries no attestation, so it links to nothing anyone signed' };
+  }
+  if (attestation.head_hash !== head) {
+    return { intact: false, broken_at: last, reason: `the path produces ${head} but the signed attestation claims ${attestation.head_hash}` };
+  }
+  if (Number(attestation.entries) !== last) {
+    return { intact: false, broken_at: last, reason: `the path ends at entry ${last} but the attestation covers ${attestation.entries}` };
+  }
+  return { intact: true, index, links: path.length, head_hash: head };
+}
+
 /* ------------------------------------------------------------------ CLI */
 const invokedDirectly = process.argv[1] && process.argv[1].endsWith('verify-ledger.mjs');
 if (invokedDirectly) {
@@ -205,6 +297,20 @@ if (invokedDirectly) {
   const parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
   const isExport = !Array.isArray(parsed) && typeof parsed.format === 'string'
     && parsed.format.startsWith('riskrouter-ledger-export|');
+
+  if (!Array.isArray(parsed) && parsed.format === ENTRY_PROOF_FORMAT) {
+    const proof = verifyEntryProof(parsed);
+    if (!proof.intact) {
+      console.error(`BROKEN  entry proof fails at ${proof.broken_at ?? '?'}`);
+      console.error(`        ${proof.reason}`);
+      process.exit(1);
+    }
+    console.log(`PROVED  entry ${proof.index} is rebuilt from its own content and matches its published digest`);
+    console.log(`LINKED  ${proof.links} links to the head, followed by digest only`);
+    console.log(`HEAD    ${proof.head_hash}, as the attestation in this file claims`);
+    console.log('        Check the signature with: node tools/verify-attestation.mjs <this file>');
+    process.exit(0);
+  }
 
   const result = isExport
     ? verifyExport(parsed)
@@ -226,13 +332,17 @@ if (invokedDirectly) {
   console.log(`HEAD    ${result.head_hash}`);
 
   if (expected) {
-    if (expected !== result.head_hash) {
-      console.error('\nMISMATCH against the head you recorded earlier.');
+    const at = positionOfHead(isExport ? parsed : (Array.isArray(parsed) ? parsed : parsed.rows || []), expected);
+    if (at === null) {
+      console.error('\nMISMATCH against the head you recorded earlier: it is not a head of this chain.');
       console.error(`  expected ${expected}`);
-      console.error(`  computed ${result.head_hash}`);
-      console.error('History has been altered, or you are looking at a different ledger.');
+      console.error(`  this file's head ${result.head_hash}`);
+      console.error('History has been altered, you are looking at a different ledger, or the head is newer than this file.');
       process.exit(1);
     }
-    console.log('MATCHES the head hash you recorded earlier. History is unchanged.');
+    const added = result.checked - at;
+    console.log(added === 0
+      ? 'MATCHES the head hash you recorded earlier. History is unchanged.'
+      : `MATCHES the head hash you recorded earlier: it was the head after entry ${at}. History up to that entry is unchanged; ${added} ${added === 1 ? 'entry has' : 'entries have'} been added since.`);
   }
 }
