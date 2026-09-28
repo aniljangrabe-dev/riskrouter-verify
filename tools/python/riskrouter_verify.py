@@ -18,9 +18,11 @@ FILE may be any of:
     a v1 ledger export              riskrouter-ledger-export|v1
     a v1 single-entry proof         riskrouter-entry-proof|v1
     a v1 saved attestation          {"attestation": ..., "signature": ...}
-    a v2 evidence proof             riskrouter-evidence-proof|v2
+    a v2 evidence proof             riskrouter-evidence-proof|v2         (a v3 signed leaf too; --signer-key optional)
     a v2 consistency proof          riskrouter-evidence-consistency|v2  (needs --saved-head)
     a v2 witness cosignature        riskrouter-evidence-cosignature|v2   (needs --witness-key)
+    a record bundle                 riskrouter-record-bundle|1           (a record, its salt, and its evidence proof)
+    an RFC 3161 head timestamp      riskrouter-head-timestamp|1          (--key checks our signature on the head too)
     a list of v1 ledger rows
 
 Exit status: 0 verified, 1 not verified, 2 usage.
@@ -384,8 +386,408 @@ def verify_consistency(first, second, first_root, second_root, path):
 
 
 def leaf_string(entry):
+    """The frozen leaf string: v2, or v3 when the entry carries the decision-maker's own signature."""
+    if int(entry.get("leaf_version") or 2) == 3 or entry.get("signer_key_id"):
+        return "|".join(["riskrouter-evidence-leaf", "v3", str(entry["leaf_index"]), entry["created_at"],
+                         entry["distributor_id"], entry["kind"], entry["record_digest"],
+                         entry["signer_key_id"], entry["claimed_at"], entry["client_signature"]])
     return "|".join(["riskrouter-evidence-leaf", "v2", str(entry["leaf_index"]), entry["created_at"],
                      entry["distributor_id"], entry["kind"], entry["record_digest"]])
+
+
+def claim_payload(entry):
+    """Frozen: what the client signed, before the log assigned anything."""
+    return "|".join(["riskrouter-evidence-claim", "v3", entry["kind"], entry["record_digest"],
+                     entry["signer_key_id"], entry["claimed_at"]])
+
+
+def signer_key_id(jwk):
+    """A signer's key id, derived as a witness id is: SHA-256 over JSON [x, y], first 16 hex."""
+    return hashlib.sha256(json.dumps([jwk["x"], jwk["y"]], separators=(",", ":")).encode("utf-8")).hexdigest()[:16]
+
+
+def verify_claim(entry, jwk):
+    """True only if the entry's client_signature verifies over its claim payload under the signer's JWK."""
+    try:
+        if signer_key_id(jwk) != entry["signer_key_id"]:
+            return False
+        return ecdsa_p256_verify(jwk, claim_payload(entry).encode("utf-8"), entry["client_signature"])
+    except (KeyError, TypeError):
+        return False
+
+
+# ------------------------------------------------------------ records
+
+# A record is a JSON object whose canonical form is RFC 8785 under a narrow
+# profile (docs/regime-packs.md, /spec): keys ^[a-z][a-z0-9_]{0,63}$, integers
+# within +/-(2^53 - 1), valid Unicode strings, nesting at most 32 deep. The
+# digest is SHA-256(salt || UTF-8(canonical)). Reimplemented here, not shared.
+
+_RECORD_KEY = re.compile(r"^[a-z][a-z0-9_]{0,63}\Z")
+_SAFE = 2 ** 53 - 1
+_SALT = re.compile(r"^(?:[0-9a-f]{2}){16,64}\Z")
+
+
+def _record_value(v, depth, where):
+    if depth > 32:
+        raise ValueError("%s: nested more than 32 deep" % where)
+    if v is None:
+        return "null"
+    if v is True:
+        return "true"
+    if v is False:
+        return "false"
+    if isinstance(v, float):
+        # JSON "1.0" is the number 1, as it is in JavaScript; a fraction is refused.
+        if v != v or v in (float("inf"), float("-inf")) or not v.is_integer():
+            raise ValueError("%s: numbers must be whole; write money as integer cents" % where)
+        v = int(v)
+    if isinstance(v, int):
+        if abs(v) > _SAFE:
+            raise ValueError("%s: integers must be within +/-(2^53 - 1)" % where)
+        return str(v)
+    if isinstance(v, str):
+        if any(0xD800 <= ord(c) <= 0xDFFF for c in v):
+            raise ValueError("%s: the string is not valid Unicode (a lone surrogate)" % where)
+        # Escapes exactly the characters ECMAScript's JSON.stringify escapes, as RFC 8785 requires.
+        return json.dumps(v, ensure_ascii=False)
+    if isinstance(v, list):
+        return "[" + ",".join(_record_value(x, depth + 1, "%s[%d]" % (where, i)) for i, x in enumerate(v)) + "]"
+    if isinstance(v, dict):
+        for k in v:
+            if not isinstance(k, str) or not _RECORD_KEY.match(k):
+                raise ValueError("%s: key %r is not lower-case a-z, 0-9 and _ starting with a letter" % (where, k))
+        return "{" + ",".join(json.dumps(k) + ":" + _record_value(v[k], depth + 1, "%s.%s" % (where, k)) for k in sorted(v)) + "}"
+    raise ValueError("%s: %s is not a JSON value a record may hold" % (where, type(v).__name__))
+
+
+def canonical_record(record):
+    """The canonical form of a record, or ValueError saying why it has none."""
+    if not isinstance(record, dict):
+        raise ValueError("a record is a JSON object")
+    return _record_value(record, 1, "$")
+
+
+def acceptable_record(record):
+    try:
+        canonical_record(record)
+        return True
+    except ValueError:
+        return False
+
+
+def record_digest(salt_hex, record):
+    if not isinstance(salt_hex, str) or not _SALT.match(salt_hex):
+        raise ValueError("the salt is 16 to 64 bytes written as lowercase hex")
+    return sha256_hex(bytes.fromhex(salt_hex) + canonical_record(record).encode("utf-8"))
+
+
+def verify_record_bundle(doc, published=None):
+    """A record, its salt and the evidence proof for its digest. Returns [(ok, line), ...]."""
+    lines = []
+    record, proof = doc.get("record"), doc.get("proof") or {}
+    entry = proof.get("entry") or {}
+    try:
+        digest = record_digest(doc.get("salt_hex"), record)
+    except ValueError as e:
+        return [(False, "record: %s" % e)]
+    lines.append((digest == entry.get("record_digest"),
+                  "the record and its salt produce the recorded digest" if digest == entry.get("record_digest")
+                  else "the record and its salt do NOT produce the digest in the proof: this is not the record that was recorded"))
+    if "kind" in record or "kind" in entry:
+        same = record.get("kind") == entry.get("kind")
+        lines.append((same, "its kind %s is the kind recorded" % entry.get("kind") if same
+                      else "its kind %r is not the kind recorded, %r" % (record.get("kind"), entry.get("kind"))))
+    r = verify_evidence_proof(proof)
+    lines.append((r["intact"], "entry %d is in the tree of %d leaves with root %s" % (r["leaf_index"], r["tree_size"], r["root_hash"])
+                  if r["intact"] else r["reason"]))
+    if r["intact"] and r.get("signer_key_id"):
+        lines.append((True, "the signer %s asserted it at %s; its own signature verifies" % (r["signer_key_id"], r["claimed_at"])))
+    if published is not None and proof.get("head"):
+        sig = verify_head_signature(proof["head"], proof.get("signature"), published)
+        lines.append((sig["ok"], "we signed that head" if sig["ok"] else sig["reason"]))
+    return lines
+
+
+# ------------------------------------------------ RFC 3161 time-stamp tokens
+# docs/legal-time.md. A token is the authority's signed statement that it saw
+# SHA-256(UTF-8(our signed payload)) at genTime. Checked here with our own DER
+# reader, X.509 parsing, RSA PKCS#1 v1.5 and ECDSA P-256: nothing is shared
+# with the JavaScript verifier, and no network is used.
+
+_OID_SIGNED_DATA = "1.2.840.113549.1.7.2"
+_OID_TST_INFO = "1.2.840.113549.1.9.16.1.4"
+_OID_CONTENT_TYPE = "1.2.840.113549.1.9.3"
+_OID_MESSAGE_DIGEST = "1.2.840.113549.1.9.4"
+_OID_SIGNING_CERT = "1.2.840.113549.1.9.16.2.12"
+_OID_SIGNING_CERT_V2 = "1.2.840.113549.1.9.16.2.47"
+_OID_TIME_STAMPING = "1.3.6.1.5.5.7.3.8"
+_OID_EKU = "2.5.29.37"
+_HASH_OIDS = {"2.16.840.1.101.3.4.2.1": "sha256", "2.16.840.1.101.3.4.2.2": "sha384", "2.16.840.1.101.3.4.2.3": "sha512"}
+_SIG_OIDS = {
+    "1.2.840.113549.1.1.1": ("rsa", None), "1.2.840.113549.1.1.11": ("rsa", "sha256"),
+    "1.2.840.113549.1.1.12": ("rsa", "sha384"), "1.2.840.113549.1.1.13": ("rsa", "sha512"),
+    "1.2.840.10045.4.3.2": ("ecdsa", "sha256"),
+}
+_DIGEST_INFO = {  # DER DigestInfo prefixes, with and without the NULL parameters
+    "sha256": (bytes.fromhex("3031300d060960864801650304020105000420"), bytes.fromhex("302f300b0609608648016503040201")),
+    "sha384": (bytes.fromhex("3041300d060960864801650304020205000430"), bytes.fromhex("303f300b0609608648016503040202")),
+    "sha512": (bytes.fromhex("3051300d060960864801650304020305000440"), bytes.fromhex("304f300b0609608648016503040203")),
+}
+_NAME_OIDS = {"2.5.4.3": "CN", "2.5.4.6": "C", "2.5.4.7": "L", "2.5.4.8": "ST", "2.5.4.10": "O", "2.5.4.11": "OU",
+              "2.5.4.5": "serialNumber", "2.5.4.97": "organizationIdentifier"}
+
+
+def _tlv(buf, pos=0):
+    """(tag, start, value_start, end) of the DER element at pos."""
+    tag = buf[pos]
+    if tag & 0x1F == 0x1F:
+        raise ValueError("high tag numbers are not used here")
+    length = buf[pos + 1]
+    p = pos + 2
+    if length & 0x80:
+        n = length & 0x7F
+        if n == 0 or n > 4:
+            raise ValueError("indefinite or oversized length")
+        length = int.from_bytes(buf[p:p + n], "big")
+        p += n
+    if p + length > len(buf):
+        raise ValueError("truncated")
+    return tag, pos, p, p + length
+
+
+def _kids(buf, node):
+    out, p = [], node[2]
+    while p < node[3]:
+        c = _tlv(buf, p)
+        out.append(c)
+        p = c[3]
+    return out
+
+
+def _val(buf, node):
+    return buf[node[2]:node[3]]
+
+
+def _whole(buf, node):
+    return buf[node[1]:node[3]]
+
+
+def _oid(b):
+    parts, v = [b[0] // 40, b[0] % 40], 0
+    for x in b[1:]:
+        v = (v << 7) | (x & 0x7F)
+        if not x & 0x80:
+            parts.append(v)
+            v = 0
+    return ".".join(str(p) for p in parts)
+
+
+def _need(node, tag, what):
+    if node is None or node[0] != tag:
+        raise ValueError("%s is not where RFC 3161 puts it" % what)
+    return node
+
+
+def _der_time(tag, raw):
+    s = raw.decode("ascii")
+    if tag == 0x17:  # UTCTime, YYMMDDHHMMSSZ
+        s = ("19" if int(s[:2]) >= 50 else "20") + s
+    m = re.match(r"^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})(\.\d+)?Z$", s)
+    if not m:
+        raise ValueError("time %s is not UTC" % s)
+    return "%s-%s-%sT%s:%s:%s%sZ" % (m.group(1), m.group(2), m.group(3), m.group(4), m.group(5), m.group(6), m.group(7) or "")
+
+
+def _name(buf, node):
+    parts = []
+    for rdn in _kids(buf, node):
+        for atv in _kids(buf, rdn):
+            t, v = _kids(buf, atv)
+            parts.append("%s=%s" % (_NAME_OIDS.get(_oid(_val(buf, t)), _oid(_val(buf, t))), _val(buf, v).decode("utf-8", "replace")))
+    return ", ".join(parts)
+
+
+class _Cert(object):
+    def __init__(self, der):
+        self.der = bytes(der)
+        b = self.der
+        top = _kids(b, _tlv(b))
+        self.tbs = _whole(b, top[0])
+        self.sig_alg = _oid(_val(b, _kids(b, top[1])[0]))
+        self.sig = _val(b, top[2])[1:]  # BIT STRING, no unused bits
+        t = _kids(b, top[0])
+        if t[0][0] == 0xA0:
+            t = t[1:]
+        self.serial = _val(b, t[0]).hex().lstrip("0") or "0"
+        self.issuer_der, self.subject_der = _whole(b, t[2]), _whole(b, t[4])
+        self.issuer, self.subject = _name(b, t[2]), _name(b, t[4])
+        nb, na = _kids(b, t[3])
+        self.not_before, self.not_after = _der_time(nb[0], _val(b, nb)), _der_time(na[0], _val(b, na))
+        spki = _kids(b, t[5])
+        alg = _kids(b, spki[0])
+        key_bits = _val(b, spki[1])[1:]
+        self.key_type = _oid(_val(b, alg[0]))
+        if self.key_type == "1.2.840.113549.1.1.1":
+            n, e = _kids(key_bits, _tlv(key_bits))
+            self.rsa = (int.from_bytes(_val(key_bits, n), "big"), int.from_bytes(_val(key_bits, e), "big"))
+        elif self.key_type == "1.2.840.10045.2.1" and len(alg) > 1 and _oid(_val(b, alg[1])) == "1.2.840.10045.3.1.7" and key_bits[:1] == b"\x04":
+            self.ec = (int.from_bytes(key_bits[1:33], "big"), int.from_bytes(key_bits[33:65], "big"))
+        self.eku = []
+        for ext in t[6:]:
+            if ext[0] != 0xA3:
+                continue
+            for e in _kids(b, _kids(b, ext)[0]):
+                ek = _kids(b, e)
+                if _oid(_val(b, ek[0])) == _OID_EKU:
+                    inner = _val(b, ek[-1])
+                    self.eku = [_oid(_val(inner, o)) for o in _kids(inner, _tlv(inner))]
+        self.fingerprint256 = ":".join("%02X" % x for x in hashlib.sha256(self.der).digest())
+
+    def verify(self, kind, hash_name, message, signature):
+        digest = hashlib.new(hash_name, message).digest()
+        if kind == "rsa" and hasattr(self, "rsa"):
+            n, e = self.rsa
+            k = (n.bit_length() + 7) // 8
+            if len(signature) != k:
+                return False
+            em = pow(int.from_bytes(signature, "big"), e, n).to_bytes(k, "big")
+            for prefix in _DIGEST_INFO[hash_name]:
+                t = prefix + digest
+                if em == b"\x00\x01" + b"\xff" * (k - 3 - len(t)) + b"\x00" + t:
+                    return True
+            return False
+        if kind == "ecdsa" and hasattr(self, "ec") and hash_name == "sha256":
+            r, s = _kids(signature, _tlv(signature))
+            raw = int.from_bytes(_val(signature, r), "big").to_bytes(32, "big") + int.from_bytes(_val(signature, s), "big").to_bytes(32, "big")
+            jwk = {"kty": "EC", "crv": "P-256",
+                   "x": base64.urlsafe_b64encode(self.ec[0].to_bytes(32, "big")).decode().rstrip("="),
+                   "y": base64.urlsafe_b64encode(self.ec[1].to_bytes(32, "big")).decode().rstrip("=")}
+            return ecdsa_p256_verify(jwk, message, base64.b64encode(raw).decode())
+        return False
+
+    def issued(self, issuer):
+        if self.issuer_der != issuer.subject_der or self.sig_alg not in _SIG_OIDS:
+            return False
+        kind, h = _SIG_OIDS[self.sig_alg]
+        return h is not None and issuer.verify(kind, h, self.tbs, self.sig)
+
+
+def verify_tst_token(token, imprint, nonce=None):
+    """A DER TimeStampToken against the imprint it should carry: {"ok": True, ...} or {"ok": False, "reason"}."""
+    try:
+        b = bytes(token)
+        ci = _kids(b, _need(_tlv(b), 0x30, "the token"))
+        if _oid(_val(b, ci[0])) != _OID_SIGNED_DATA:
+            return {"ok": False, "reason": "the token is not CMS SignedData"}
+        sd = _kids(b, _need(_kids(b, _need(ci[1], 0xA0, "the signed data"))[0], 0x30, "the signed data"))
+        encap = _kids(b, sd[2])
+        if _oid(_val(b, encap[0])) != _OID_TST_INFO:
+            return {"ok": False, "reason": "the signed content is not a TSTInfo"}
+        econtent = _val(b, _need(_kids(b, _need(encap[1], 0xA0, "the content"))[0], 0x04, "the content"))
+        certs = [_Cert(_whole(b, c)) for n in sd[3:-1] if n[0] == 0xA0 for c in _kids(b, n) if c[0] == 0x30]
+        tb = econtent
+        tst = _kids(tb, _need(_tlv(tb), 0x30, "the TSTInfo"))
+        mi = _kids(tb, tst[2])
+        if _oid(_val(tb, _kids(tb, mi[0])[0])) != "2.16.840.1.101.3.4.2.1":
+            return {"ok": False, "reason": "the imprint does not use SHA-256"}
+        if _val(tb, mi[1]) != bytes(imprint):
+            return {"ok": False, "reason": "the token is for a different digest: it does not timestamp this payload"}
+        gen_time = _der_time(0x18, _val(tb, _need(tst[4], 0x18, "genTime")))
+        token_nonce = next((_val(tb, n).hex().lstrip("0") or "0" for n in tst[5:] if n[0] == 0x02), None)
+        if nonce is not None and token_nonce != (nonce.hex().lstrip("0") or "0"):
+            return {"ok": False, "reason": "the token does not carry the nonce that was sent"}
+        infos = _kids(b, _need(sd[-1], 0x31, "the signer infos"))
+        if len(infos) != 1:
+            return {"ok": False, "reason": "the token has %d signers, not one" % len(infos)}
+        si = _kids(b, infos[0])
+        digest_oid = _oid(_val(b, _kids(b, si[2])[0]))
+        if digest_oid not in _HASH_OIDS:
+            return {"ok": False, "reason": "SHA-1 is not accepted" if digest_oid == "1.3.14.3.2.26" else "unsupported digest %s" % digest_oid}
+        h = _HASH_OIDS[digest_oid]
+        attrs_node = _need(si[3], 0xA0, "the signed attributes")
+        attrs = {}
+        for a in _kids(b, attrs_node):
+            t, vals = _kids(b, a)
+            attrs[_oid(_val(b, t))] = _kids(b, vals)
+        if _OID_CONTENT_TYPE not in attrs or _oid(_val(b, attrs[_OID_CONTENT_TYPE][0])) != _OID_TST_INFO:
+            return {"ok": False, "reason": "the signed attributes do not say the content is a TSTInfo"}
+        if _OID_MESSAGE_DIGEST not in attrs or _val(b, attrs[_OID_MESSAGE_DIGEST][0]) != hashlib.new(h, econtent).digest():
+            return {"ok": False, "reason": "the signed attributes do not bind this TSTInfo: it was changed after signing"}
+        sig_oid = _oid(_val(b, _kids(b, si[4])[0]))
+        if sig_oid not in _SIG_OIDS:
+            return {"ok": False, "reason": "unsupported signature algorithm %s" % sig_oid}
+        kind, sig_hash = _SIG_OIDS[sig_oid]
+        signed = b"\x31" + bytes(_whole(b, attrs_node))[1:]
+        signature = _val(b, _need(si[5], 0x04, "the signature"))
+        sid = si[1]
+        want = (_val(b, _kids(b, sid)[1]).hex().lstrip("0") or "0") if sid[0] == 0x30 else None
+        signer = next((c for c in certs if (want is None or c.serial == want) and c.verify(kind, sig_hash or h, signed, signature)), None)
+        if signer is None:
+            return {"ok": False, "reason": "the authority's signature does not verify with the certificate the token carries"
+                    if certs else "the token carries no certificate to check its signature with"}
+        ess = attrs.get(_OID_SIGNING_CERT_V2) or attrs.get(_OID_SIGNING_CERT)
+        if ess:
+            first = _kids(b, _kids(b, ess[0])[0])[0]
+            cid = _kids(b, first)
+            ess_hash, hash_node = ("sha256" if _OID_SIGNING_CERT_V2 in attrs else "sha1"), cid[0]
+            if _OID_SIGNING_CERT_V2 in attrs and cid[0][0] == 0x30:
+                ess_hash, hash_node = _HASH_OIDS.get(_oid(_val(b, _kids(b, cid[0])[0]))), cid[1]
+            if not ess_hash or _val(b, hash_node) != hashlib.new(ess_hash, signer.der).digest():
+                return {"ok": False, "reason": "the signing-certificate attribute names a different certificate"}
+        if _OID_TIME_STAMPING not in signer.eku:
+            return {"ok": False, "reason": "the signing certificate is not for time-stamping (no id-kp-timeStamping)"}
+        if not (signer.not_before <= gen_time[:19] + "Z" <= signer.not_after):
+            return {"ok": False, "reason": "genTime is outside the signing certificate's validity"}
+        chain = [signer]
+        while len(chain) < 8 and not chain[-1].issued(chain[-1]):
+            up = next((c for c in certs if c not in chain and chain[-1].issued(c)), None)
+            if up is None:
+                break
+            chain.append(up)
+        return {"ok": True, "gen_time": gen_time, "tsa": signer.subject, "root": chain[-1].subject,
+                "root_fingerprint256": chain[-1].fingerprint256, "root_self_signed": chain[-1].issued(chain[-1])}
+    except (ValueError, IndexError, KeyError) as e:
+        return {"ok": False, "reason": "the token cannot be read: %s" % e}
+
+
+_QUALIFIED_LIST = re.compile(r"^https://(eidas\.ec\.europa\.eu|esignature\.ec\.europa\.eu)/")
+
+
+def verify_head_timestamp(doc, published=None):
+    """A riskrouter-head-timestamp|1 file: [(ok, line), ...]; ok None is a note."""
+    lines = []
+    signed = doc.get("signed") or {}
+    if "head" in signed:
+        subject, payload = "riskrouter-evidence-head|v2", head_payload(signed["head"])
+    elif "attestation" in signed:
+        subject, payload = "riskrouter-ledger-attestation|v1", attestation_payload(signed["attestation"])
+    else:
+        return [(False, "the file carries no head")]
+    if doc.get("subject") != subject or doc.get("payload") != payload:
+        return [(False, "the payload is not the one the head it carries produces")]
+    if published is not None:
+        sig = doc.get("signature") or {}
+        key = pick_key(published, sig.get("key_id"))
+        ok = key is not None and ecdsa_p256_verify(key["public_key"], payload.encode("utf-8"), sig.get("signature", ""))
+        lines.append((ok, "our signature on the head verifies" if ok else "our signature on the head does not verify"))
+    r = verify_tst_token(base64.b64decode(doc.get("token", "")), hashlib.sha256(payload.encode("utf-8")).digest())
+    if not r["ok"]:
+        return lines + [(False, "RFC 3161 token: %s" % r["reason"])]
+    if doc.get("gen_time") and doc["gen_time"] != r["gen_time"]:
+        lines.append((False, "the file says %s but the token says %s" % (doc["gen_time"], r["gen_time"])))
+    tsa = doc.get("tsa") or {}
+    lines.append((True, "RFC 3161 token: %s states it saw this head at %s" % (tsa.get("name") or r["tsa"], r["gen_time"])))
+    lines.append((None, "chain carried in the token ends at %s%s (SHA-256 %s); compare it with the root the authority publishes"
+                  % (r["root"], ", self-signed" if r["root_self_signed"] else "", r["root_fingerprint256"])))
+    if tsa.get("qualified") is True:
+        if _QUALIFIED_LIST.match(str(tsa.get("trusted_list") or "")):
+            lines.append((None, "listed by the operator as a qualified eIDAS time stamp; check the entry: %s" % tsa["trusted_list"]))
+        else:
+            lines.append((False, "the file calls this a qualified time stamp but names no EU Trusted List entry"))
+    else:
+        lines.append((None, "not a qualified eIDAS time stamp: evidence of time, without the presumption a qualified one carries"))
+    return lines
 
 
 def head_payload(head):
@@ -410,8 +812,8 @@ def verify_head_signature(head, signature, published):
     return {"ok": True}
 
 
-def verify_evidence_proof(doc, saved_head=None):
-    """A v2 proof, against the head it carries or a head the holder saved."""
+def verify_evidence_proof(doc, saved_head=None, signer_public_key=None):
+    """A v2 proof, against the head it carries or a head the holder saved; a v3 leaf's client signature is checked too."""
     entry = doc.get("entry") or {}
     try:
         leaf = leaf_hash(leaf_string(entry).encode("utf-8"))
@@ -426,7 +828,20 @@ def verify_evidence_proof(doc, saved_head=None):
         return {"intact": False, "reason": "the proof is for tree_size %s but the head is for %s" % (doc.get("tree_size"), head["tree_size"])}
     if not verify_inclusion(int(entry["leaf_index"]), int(head["tree_size"]), leaf, doc.get("audit_path") or [], head["root_hash"]):
         return {"intact": False, "reason": "the audit path does not lead from this entry to the head's root"}
-    return {"intact": True, "leaf_index": int(entry["leaf_index"]), "tree_size": int(head["tree_size"]), "root_hash": head["root_hash"]}
+    result = {"intact": True, "leaf_index": int(entry["leaf_index"]), "tree_size": int(head["tree_size"]), "root_hash": head["root_hash"]}
+    if int(entry.get("leaf_version") or 2) == 3:
+        # A v3 leaf carries the decision-maker's own signature; a proof of one is
+        # not intact unless that signature verifies too. The key comes with the
+        # proof (signer_public_key); pass --signer-key to use one the signer
+        # published instead, which is the stronger check.
+        key = signer_public_key or doc.get("signer_public_key")
+        if not key:
+            return {"intact": False, "reason": "a v3 leaf, but no signer key to verify the client signature with"}
+        if not verify_claim(entry, key):
+            return {"intact": False, "reason": "the client signature does not verify over the claim payload with the signer's key"}
+        result["signer_key_id"] = entry["signer_key_id"]
+        result["claimed_at"] = entry["claimed_at"]
+    return result
 
 
 def verify_consistency_doc(doc, saved_head):
@@ -532,9 +947,13 @@ def main(argv):
                % (r["index"], r["links"]) if r["intact"] else "broken at %s: %s" % (r.get("broken_at"), r["reason"]))
     elif fmt == "riskrouter-evidence-proof|v2":
         saved = _arg(argv, "--saved-head")
-        r = verify_evidence_proof(doc, _load(saved).get("head", _load(saved)) if saved else None)
+        signer = _arg(argv, "--signer-key")
+        r = verify_evidence_proof(doc, _load(saved).get("head", _load(saved)) if saved else None, _load(signer) if signer else None)
         report(r["intact"], "entry %d is in the tree of %d leaves with root %s" % (r["leaf_index"], r["tree_size"], r["root_hash"])
                if r["intact"] else r["reason"])
+        if r["intact"] and r.get("signer_key_id"):
+            report(True, "the signer %s asserted this claim at %s; its own signature verifies%s"
+                   % (r["signer_key_id"], r["claimed_at"], " against the key you supplied" if signer else " against the key the proof carries"))
         if published is not None and not saved and doc.get("head"):
             s = verify_head_signature(doc["head"], doc.get("signature"), published)
             report(s["ok"], "we signed that head" if s["ok"] else s["reason"])
@@ -557,6 +976,15 @@ def main(argv):
             return 2
         r = verify_cosignature(doc, _load(wk), published)
         report(r["ok"], "witnessed tree_size %s, root %s" % (r["tree_size"], r["root_hash"]) if r["ok"] else r["reason"])
+    elif fmt == "riskrouter-head-timestamp|1":
+        for ok, line in verify_head_timestamp(doc, published):
+            if ok is None:
+                print("NOTE  " + line)
+            else:
+                report(ok, line)
+    elif fmt == "riskrouter-record-bundle|1":
+        for ok, line in verify_record_bundle(doc, published):
+            report(ok, line)
     elif isinstance(doc, dict) and doc.get("attestation") and doc.get("signature"):
         if published is None:
             print("an attestation is checked against a published key: pass --key", file=sys.stderr)

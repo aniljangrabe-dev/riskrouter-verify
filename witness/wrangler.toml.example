@@ -1,0 +1,30 @@
+# A RiskRouter-compatible witness on your own Cloudflare account. witness/README.md.
+#
+#   cp witness/wrangler.toml.example witness/wrangler.toml
+#   npx wrangler kv namespace create WITNESS_STATE        # paste the id below
+#   node witness/node.mjs init --out ./my-witness --name "Your organisation"
+#   npx wrangler secret put WITNESS_PRIVATE_KEY -c witness/wrangler.toml < ./my-witness/private-key.b64
+#   npx wrangler deploy -c witness/wrangler.toml
+#
+# The private key never leaves your account. Publish ./my-witness/public-key.json
+# (the Worker also serves it at /public-key.json).
+
+name = "my-witness"
+main = "worker.js"
+compatibility_date = "2026-09-01"
+
+[triggers]
+crons = ["17 * * * *"]   # hourly; pick your own minute
+
+[[kv_namespaces]]
+binding = "WITNESS_STATE"
+id = "PASTE-THE-NAMESPACE-ID"
+
+[vars]
+WITNESS_NAME = "Your organisation"
+# Every log in the public registry. Keys are pinned the first time the witness
+# sees them; a registry that later drops or changes one raises an alarm.
+FOLLOW_REGISTRY = "https://riskrouter.eu/registry.json"
+# Optional: logs you name yourself, with their keys, in addition to (or
+# instead of) the registry.
+# WITNESS_LOGS = '[{"id":"my-log","api":"https://evidence.example.org","keys":[{"key_id":"…","public_key":{"kty":"EC","crv":"P-256","x":"…","y":"…"}}]}]'

@@ -1,0 +1,82 @@
+{
+  "format": "riskrouter-regime-pack|1",
+  "id": "dora",
+  "version": 1,
+  "title": "ICT incidents, incident reports and the register of information",
+  "regime": "DORA",
+  "summary": "What a financial entity records so that its incident log, the reports it sent to its competent authority and its register of ICT third-party arrangements can be shown later to be exactly what existed at each date.",
+  "instruments": [
+    { "id": "dora", "name": "Regulation (EU) 2022/2554 (Digital Operational Resilience Act)", "celex": "32022R2554", "source": "https://eur-lex.europa.eu/eli/reg/2022/2554/oj/eng" }
+  ],
+  "articles": [
+    { "id": "dora-17-1", "instrument": "dora", "ref": "Article 17(1)", "asks": "Define, establish and implement an ICT-related incident management process to detect, manage and notify ICT-related incidents." },
+    { "id": "dora-17-2", "instrument": "dora", "ref": "Article 17(2)", "asks": "Record all ICT-related incidents and significant cyber threats, with procedures for consistent monitoring, handling and follow-up so root causes are identified, documented and addressed." },
+    { "id": "dora-18", "instrument": "dora", "ref": "Article 18", "asks": "Classify ICT-related incidents and determine their impact against the criteria the article sets." },
+    { "id": "dora-19-4", "instrument": "dora", "ref": "Article 19(4)", "asks": "For a major ICT-related incident, submit to the competent authority an initial notification, an intermediate report and a final report." },
+    { "id": "dora-28-3", "instrument": "dora", "ref": "Article 28(3)", "asks": "Maintain and update a register of information on all contractual arrangements for ICT services provided by ICT third-party service providers." }
+  ],
+  "kinds": [
+    {
+      "kind": "dora.incident",
+      "title": "Incident recorded at a stage",
+      "when": "At each stage of an ICT-related incident or significant cyber threat: detected, classified, resolved, closed.",
+      "fields": [
+        { "name": "incident_ref", "type": "reference", "required": true, "description": "Your reference for the incident.", "evidences": ["dora-17-2"] },
+        { "name": "stage", "type": "enum", "values": ["detected", "classified", "resolved", "closed"], "required": true, "description": "The stage this record captures.", "evidences": ["dora-17-1"] },
+        { "name": "category", "type": "enum", "values": ["ict-related-incident", "significant-cyber-threat"], "required": true, "description": "Whether it is an incident or a significant cyber threat.", "evidences": ["dora-17-2"] },
+        { "name": "classification", "type": "enum", "values": ["major", "not-major", "not-yet-classified"], "required": true, "description": "Your classification under Article 18 at this stage.", "evidences": ["dora-18"] },
+        { "name": "services_affected", "type": "list", "items": { "type": "reference" }, "required": false, "description": "Your references for the services affected.", "evidences": ["dora-18"] },
+        { "name": "description", "type": "text", "required": true, "description": "What happened, as known at this stage.", "evidences": ["dora-17-2"] },
+        { "name": "root_cause", "type": "text", "required": false, "description": "The root cause, once identified.", "evidences": ["dora-17-2"] },
+        { "name": "actions", "type": "text", "required": false, "description": "What was done, and what will be done to prevent recurrence.", "evidences": ["dora-17-2"] },
+        { "name": "detected_at", "type": "timestamp", "required": true, "description": "When the incident was detected, UTC.", "evidences": ["dora-17-1"] },
+        { "name": "stage_at", "type": "timestamp", "required": true, "description": "When this stage was reached, UTC.", "evidences": ["dora-17-1"] }
+      ],
+      "example": {
+        "pack": "dora", "pack_version": 1, "kind": "dora.incident", "record_id": "inc-2026-0042-classified",
+        "incident_ref": "inc-2026-0042", "stage": "classified", "category": "ict-related-incident", "classification": "major",
+        "services_affected": ["svc-online-banking", "svc-card-payments"],
+        "description": "Card authorisations failed for 2 h 10 min after a certificate expired on the payment gateway.",
+        "detected_at": "2026-09-20T06:02:00Z", "stage_at": "2026-09-20T07:15:00Z"
+      }
+    },
+    {
+      "kind": "dora.incident-report",
+      "title": "Report submitted to the competent authority",
+      "when": "When an initial notification, an intermediate report or a final report is submitted.",
+      "fields": [
+        { "name": "incident_ref", "type": "reference", "required": true, "description": "Your reference for the incident.", "evidences": ["dora-19-4"] },
+        { "name": "report_type", "type": "enum", "values": ["initial-notification", "intermediate-report", "final-report"], "required": true, "description": "Which report.", "evidences": ["dora-19-4"] },
+        { "name": "authority", "type": "string", "max_length": 80, "required": true, "description": "The competent authority it went to.", "evidences": ["dora-19-4"] },
+        { "name": "report_digest", "type": "digest", "required": true, "description": "SHA-256 of the report exactly as submitted.", "evidences": ["dora-19-4"] },
+        { "name": "submission_ref", "type": "reference", "required": false, "description": "The authority's acknowledgement reference, if any.", "evidences": ["dora-19-4"] },
+        { "name": "submitted_at", "type": "timestamp", "required": true, "description": "When it was submitted, UTC.", "evidences": ["dora-19-4"] }
+      ],
+      "example": {
+        "pack": "dora", "pack_version": 1, "kind": "dora.incident-report", "record_id": "rep-2026-0042-initial",
+        "incident_ref": "inc-2026-0042", "report_type": "initial-notification", "authority": "National Bank of Belgium",
+        "report_digest": "7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b",
+        "submission_ref": "ack-20260920-118", "submitted_at": "2026-09-20T09:40:00Z"
+      }
+    },
+    {
+      "kind": "dora.register-snapshot",
+      "title": "Register of information at a date",
+      "when": "Each time the register is updated, and when it is submitted.",
+      "fields": [
+        { "name": "as_of", "type": "date", "required": true, "description": "The date the register describes.", "evidences": ["dora-28-3"] },
+        { "name": "register_digest", "type": "digest", "required": true, "description": "SHA-256 of the register file exactly as kept or submitted.", "evidences": ["dora-28-3"] },
+        { "name": "arrangements", "type": "integer", "min": 0, "required": true, "description": "How many contractual arrangements it lists.", "evidences": ["dora-28-3"] },
+        { "name": "file_format", "type": "string", "max_length": 80, "required": false, "description": "The format of the file, as your authority names it.", "evidences": [] },
+        { "name": "purpose", "type": "enum", "values": ["update", "submission"], "required": true, "description": "Whether this is an internal update or the version submitted.", "evidences": ["dora-28-3"] }
+      ],
+      "example": {
+        "pack": "dora", "pack_version": 1, "kind": "dora.register-snapshot", "record_id": "roi-2026-09-30",
+        "as_of": "2026-09-30", "register_digest": "1d2c3b4a5f6e7d8c9b0a1f2e3d4c5b6a7f8e9d0c1b2a3f4e5d6c7b8a9f0e1d2c",
+        "arrangements": 37, "purpose": "update"
+      }
+    }
+  ],
+  "retention": "This pack does not state how long to keep these records. Check the period with your competent authority.",
+  "notes": "The reports themselves go to your authority by its own channel; the log never sends anything to anyone. What the log adds is that the report you hold today can be shown to be the one you held on the day you submitted it."
+}

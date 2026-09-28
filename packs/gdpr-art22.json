@@ -1,0 +1,69 @@
+{
+  "format": "riskrouter-regime-pack|1",
+  "id": "gdpr-art22",
+  "version": 1,
+  "title": "Automated individual decisions: basis, information and human intervention",
+  "regime": "GDPR Article 22",
+  "summary": "What a controller records to show, for a decision based solely on automated processing, which exception it relied on, what the person was told, and what happened when they asked for a human to look again.",
+  "instruments": [
+    { "id": "gdpr", "name": "Regulation (EU) 2016/679 (General Data Protection Regulation)", "celex": "32016R0679", "source": "https://eur-lex.europa.eu/eli/reg/2016/679/oj/eng" }
+  ],
+  "articles": [
+    { "id": "gdpr-5-2", "instrument": "gdpr", "ref": "Article 5(2)", "asks": "The controller is responsible for, and must be able to demonstrate, compliance with the principles in Article 5(1)." },
+    { "id": "gdpr-13-2-f", "instrument": "gdpr", "ref": "Article 13(2)(f) and Article 14(2)(g)", "asks": "Inform the person of the existence of automated decision-making, including profiling, referred to in Article 22(1) and (4), and at least in those cases give meaningful information about the logic involved and the significance and envisaged consequences." },
+    { "id": "gdpr-22-1", "instrument": "gdpr", "ref": "Article 22(1)", "asks": "A person has the right not to be subject to a decision based solely on automated processing, including profiling, which produces legal effects concerning them or similarly significantly affects them." },
+    { "id": "gdpr-22-2", "instrument": "gdpr", "ref": "Article 22(2)", "asks": "That does not apply where the decision is necessary for entering into or performing a contract, is authorised by Union or Member State law with suitable safeguards, or is based on the person's explicit consent." },
+    { "id": "gdpr-22-3", "instrument": "gdpr", "ref": "Article 22(3)", "asks": "Where the contract or explicit-consent exception applies, the controller implements suitable measures, at least the right to obtain human intervention, to express one's point of view and to contest the decision." }
+  ],
+  "kinds": [
+    {
+      "kind": "gdpr.automated-decision",
+      "title": "Automated decision taken",
+      "when": "When a decision falling within Article 22(1) is taken, or when you conclude a decision does not fall within it.",
+      "fields": [
+        { "name": "subject_ref", "type": "reference", "required": true, "description": "Your pseudonymous reference for the person. Never a name, an email or a national number.", "evidences": ["gdpr-22-1"] },
+        { "name": "decision_ref", "type": "reference", "required": true, "description": "Your reference for the decision.", "evidences": ["gdpr-22-1"] },
+        { "name": "solely_automated", "type": "boolean", "required": true, "description": "Whether the decision was based solely on automated processing.", "evidences": ["gdpr-22-1"] },
+        { "name": "significant_effect", "type": "boolean", "required": true, "description": "Whether it produces legal effects concerning the person or similarly significantly affects them.", "evidences": ["gdpr-22-1"] },
+        { "name": "exception", "type": "enum", "values": ["contract", "union-or-member-state-law", "explicit-consent", "not-within-article-22"], "required": true, "description": "The Article 22(2) exception relied on, or that the decision is outside Article 22(1).", "evidences": ["gdpr-22-2"] },
+        { "name": "basis_ref", "type": "reference", "required": false, "description": "Your reference for the contract, the legal provision or the consent record relied on.", "evidences": ["gdpr-22-2", "gdpr-5-2"] },
+        { "name": "information_digest", "type": "digest", "required": false, "description": "SHA-256 of the notice given to the person about the automated decision, as given.", "evidences": ["gdpr-13-2-f"] },
+        { "name": "safeguards_offered", "type": "list", "items": { "type": "enum", "values": ["human-intervention", "express-point-of-view", "contest-decision"] }, "required": true, "description": "The safeguards offered with the decision.", "evidences": ["gdpr-22-3"] },
+        { "name": "outcome", "type": "string", "max_length": 200, "required": true, "description": "The decision, in a short phrase.", "evidences": ["gdpr-5-2"] },
+        { "name": "decided_at", "type": "timestamp", "required": true, "description": "When the decision was taken, UTC.", "evidences": ["gdpr-5-2"] }
+      ],
+      "example": {
+        "pack": "gdpr-art22", "pack_version": 1, "kind": "gdpr.automated-decision", "record_id": "adm-2026-031177",
+        "subject_ref": "ps-9f3a61", "decision_ref": "app-552091", "solely_automated": true, "significant_effect": true,
+        "exception": "contract", "basis_ref": "contract-draft-552091",
+        "information_digest": "44556677889900aabbccddeeff00112233445566778899aabbccddeeff001122",
+        "safeguards_offered": ["human-intervention", "express-point-of-view", "contest-decision"],
+        "outcome": "Application declined", "decided_at": "2026-09-26T08:12:44Z"
+      }
+    },
+    {
+      "kind": "gdpr.human-intervention",
+      "title": "Human intervention requested and handled",
+      "when": "When the person asks for human intervention, expresses a point of view or contests the decision, and again when that request is concluded.",
+      "fields": [
+        { "name": "subject_ref", "type": "reference", "required": true, "description": "Your pseudonymous reference for the person. Never a name.", "evidences": ["gdpr-22-3"] },
+        { "name": "decision_record_id", "type": "reference", "required": true, "description": "The record_id of the gdpr.automated-decision record concerned.", "evidences": ["gdpr-22-3"] },
+        { "name": "request", "type": "enum", "values": ["human-intervention", "express-point-of-view", "contest-decision"], "required": true, "description": "What the person asked for.", "evidences": ["gdpr-22-3"] },
+        { "name": "requested_at", "type": "timestamp", "required": true, "description": "When the request arrived, UTC.", "evidences": ["gdpr-22-3"] },
+        { "name": "reviewer_ref", "type": "reference", "required": false, "description": "Your reference for the person who reviewed. Never a name.", "evidences": ["gdpr-22-3"] },
+        { "name": "result", "type": "enum", "values": ["pending", "upheld", "changed", "reversed"], "required": true, "description": "Where the request stands, or how it ended.", "evidences": ["gdpr-22-3"] },
+        { "name": "reasons", "type": "text", "required": false, "description": "Why the decision was upheld, changed or reversed.", "evidences": ["gdpr-22-3", "gdpr-5-2"] },
+        { "name": "concluded_at", "type": "timestamp", "required": false, "description": "When the review concluded, UTC.", "evidences": ["gdpr-22-3"] }
+      ],
+      "example": {
+        "pack": "gdpr-art22", "pack_version": 1, "kind": "gdpr.human-intervention", "record_id": "hi-2026-000418",
+        "subject_ref": "ps-9f3a61", "decision_record_id": "adm-2026-031177", "request": "contest-decision",
+        "requested_at": "2026-09-27T07:30:00Z", "reviewer_ref": "credit-officer-03", "result": "changed",
+        "reasons": "Income evidence supplied by the applicant was not available to the model; reassessed manually and approved at a lower limit.",
+        "concluded_at": "2026-09-29T14:05:00Z"
+      }
+    }
+  ],
+  "retention": "This pack does not state how long to keep these records. The records are yours and hold personal data under your control: keep them no longer than your purposes need, and they stay erasable because they never leave you. Only a salted digest is in the log, and without the record and its salt nobody, including us, can link it to anyone.",
+  "notes": "Recording that a decision was outside Article 22(1) is as useful as recording one inside it: it shows the question was asked at the time."
+}

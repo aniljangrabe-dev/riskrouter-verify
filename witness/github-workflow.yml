@@ -1,0 +1,71 @@
+# A witness that runs in GitHub Actions, in YOUR fork of
+# https://github.com/aniljangrabe-dev/riskrouter-verify. witness/README.md.
+#
+# Once:
+#   1. Fork the repository, then in your fork:
+#        cp witness/github-workflow.yml .github/workflows/witness.yml
+#        cp witness/config.example.json witness.config.json     # put your name in it
+#   2. node witness/node.mjs init --out ~/my-witness --name "Your organisation"
+#      Add the contents of ~/my-witness/private-key.b64 as the repository secret
+#      WITNESS_PRIVATE_KEY (Settings > Secrets and variables > Actions).
+#      Never commit that file.
+#   3. Commit, push, and enable Actions on the fork.
+#
+# Every hour it witnesses the logs in witness.config.json and commits what it
+# stored to witness-state/, where anyone can read it: your public key, the
+# latest cosignature of each log, and any alarm. If a log is ever caught
+# rewriting history the run fails, after committing the evidence.
+
+name: Witness
+
+on:
+  schedule:
+    - cron: '41 * * * *'   # hourly; pick your own minute
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: witness
+  cancel-in-progress: false
+
+jobs:
+  witness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Witness every configured log
+        id: round
+        env:
+          WITNESS_PRIVATE_KEY: ${{ secrets.WITNESS_PRIVATE_KEY }}
+        run: |
+          set +e
+          node witness/node.mjs run --config witness.config.json --state witness-state
+          echo "code=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Publish what was stored
+        run: |
+          if [ -z "$(git status --porcelain witness-state)" ]; then echo "Nothing new."; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add witness-state
+          git commit -m "Witness round" -m "Taken by .github/workflows/witness.yml."
+          for attempt in 1 2 3; do
+            if git push origin HEAD; then break; fi
+            sleep $((attempt * 5)); git pull --rebase origin "${GITHUB_REF_NAME}"
+          done
+
+      - name: Fail loudly on an alarm
+        if: steps.round.outputs.code != '0'
+        run: |
+          if [ "${{ steps.round.outputs.code }}" = "2" ]; then
+            echo "::error::ALARM: a log contradicted a head this witness saw. The evidence is in witness-state/alarms/. Publish it."
+          else
+            echo "::error::No log could be co-signed this round; see the step above."
+          fi
+          exit 1
