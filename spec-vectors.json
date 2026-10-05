@@ -450,5 +450,63 @@
     "root_hash": "2294fbaaa1e8a9151eb29d8d884c3c596b87f62d613b1b6e9c99b45a6fb3f184",
     "cosigned_at": "2026-09-23T12:06:00.000Z",
     "payload": "riskrouter-evidence-cosign|v2|e50a6b2ea7e57802|7|2294fbaaa1e8a9151eb29d8d884c3c596b87f62d613b1b6e9c99b45a6fb3f184|2026-09-23T12:06:00.000Z"
-  }
+  },
+  "checkpoint": {
+    "origin": "example.com/riskrouter-test-log",
+    "tree_size": 7,
+    "root_hash": "2294fbaaa1e8a9151eb29d8d884c3c596b87f62d613b1b6e9c99b45a6fb3f184",
+    "text": "example.com/riskrouter-test-log\n7\nIpT7qqHoqRUesp2NiEw8WWuH9i1hOxtunJm0Wm+z8YQ=\n",
+    "seed_hex": "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60",
+    "key_id": "f8ba12de",
+    "vkey": "example.com/riskrouter-test-log+f8ba12de+AddamAGCsQq31Uv+08lkBzoO4XLz2qYjJa8CGmj3B1Ea",
+    "signature_line": "— example.com/riskrouter-test-log +LoS3h+2fCFFLaluNNv1tN7yDcoielyn0U0rKjb3bZFVycssm39MqseYJ2qX+ChhcSbtOBIgDWwVziyh+Mrm7wP6JAw=\n",
+    "note": "example.com/riskrouter-test-log\n7\nIpT7qqHoqRUesp2NiEw8WWuH9i1hOxtunJm0Wm+z8YQ=\n\n— example.com/riskrouter-test-log +LoS3h+2fCFFLaluNNv1tN7yDcoielyn0U0rKjb3bZFVycssm39MqseYJ2qX+ChhcSbtOBIgDWwVziyh+Mrm7wP6JAw=\n"
+  },
+  "cosignature_v1": {
+    "name": "example.com/riskrouter-test-witness",
+    "seed_hex": "4ccd089b28ff96da9db6c346ec114e0f5b8a319f35aba624da8cf6ed4fb8a6fb",
+    "key_id": "3f92a1f3",
+    "vkey": "example.com/riskrouter-test-witness+3f92a1f3+BD1AF8PoQ4lakrcKp00bfrycmCzPLsSWjMDNVfEq9GYM",
+    "timestamp": 1790208000,
+    "message": "cosignature/v1\ntime 1790208000\nexample.com/riskrouter-test-log\n7\nIpT7qqHoqRUesp2NiEw8WWuH9i1hOxtunJm0Wm+z8YQ=\n",
+    "signature_line": "— example.com/riskrouter-test-witness P5Kh8wAAAABqtGgASr2bBgZ4gtLMlu4SOU4nBljeAniyLikgqdlQUeKDiMGpuRYm5Qu6hxBwP7TkJ0rEC94hl2mJm4slAmscUPoxAA==\n",
+    "note": "example.com/riskrouter-test-log\n7\nIpT7qqHoqRUesp2NiEw8WWuH9i1hOxtunJm0Wm+z8YQ=\n\n— example.com/riskrouter-test-log +LoS3h+2fCFFLaluNNv1tN7yDcoielyn0U0rKjb3bZFVycssm39MqseYJ2qX+ChhcSbtOBIgDWwVziyh+Mrm7wP6JAw=\n— example.com/riskrouter-test-witness P5Kh8wAAAABqtGgASr2bBgZ4gtLMlu4SOU4nBljeAniyLikgqdlQUeKDiMGpuRYm5Qu6hxBwP7TkJ0rEC94hl2mJm4slAmscUPoxAA==\n"
+  },
+  "scitt_statement": {
+    "note": "Registered form: tag 18, [protected, {}, payload, signature]; the digest ignores the unprotected header (here a non-empty one).",
+    "statement_hex": "d2845856a401260450356631643366396132623763346536640fa2017668747470733a2f2f6973737565722e6578616d706c650278206d6f64656c206372656469742d76342c2072656c6561736520323032362d30391901022fa119018a805820c7c5c1d70c5dec4416ab6158afd0b223ef40c29b1dc1f97ed9428b94d4cadb1c584011111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111",
+    "statement_digest": "10202462222bf72c1c1c1106dbee55b22ddbd5769100678849afa35714f9651f"
+  },
+  "scitt_receipt": {
+    "protected_hex": "a601260450646434623462333934633935353836610fa301716170692e7269736b726f757465722e657502784031303230323436323232326266373263316331633131303664626565353562323264646264353736393130303637383834396166613335373134663936353166061a6ab4680019018b016f7269736b726f757465722d6c6561668405781b323032362d30392d32335431323a30303a30352e3030303030305a782430613061306130612d313131312d343232322d383333332d3434343435353535363636366f73636974742e73746174656d656e74727269736b726f757465722d70726f66696c65781a7269736b726f757465722d73636974742d726563656970747c31",
+    "root_hash": "2294fbaaa1e8a9151eb29d8d884c3c596b87f62d613b1b6e9c99b45a6fb3f184",
+    "sig_structure_hex": "846a5369676e61747572653159010ba601260450646434623462333934633935353836610fa301716170692e7269736b726f757465722e657502784031303230323436323232326266373263316331633131303664626565353562323264646264353736393130303637383834396166613335373134663936353166061a6ab4680019018b016f7269736b726f757465722d6c6561668405781b323032362d30392d32335431323a30303a30352e3030303030305a782430613061306130612d313131312d343232322d383333332d3434343435353535363636366f73636974742e73746174656d656e74727269736b726f757465722d70726f66696c65781a7269736b726f757465722d73636974742d726563656970747c314058202294fbaaa1e8a9151eb29d8d884c3c596b87f62d613b1b6e9c99b45a6fb3f184",
+    "inclusion_proof_hex": "8307058358209b7dc158668e6d7065919d0837f66de06ede49a41edc245953efe8d45a7ccb67582041fddadba90b038b5ac4f5232f929fa3947944cb89fcdd85cfb8e2d30c3833b75820a715c97ab4176680252a5b3a44bae2d06de608cfa55676b3570f471e38f0f855"
+  },
+  "tiles": [
+    {
+      "level": 0,
+      "index": 0,
+      "width": 256,
+      "path": "tile/0/000"
+    },
+    {
+      "level": 0,
+      "index": 1234067,
+      "width": 256,
+      "path": "tile/0/x001/x234/067"
+    },
+    {
+      "level": 1,
+      "index": 5,
+      "width": 17,
+      "path": "tile/1/005.p/17"
+    },
+    {
+      "level": 2,
+      "index": 1000,
+      "width": 1,
+      "path": "tile/2/x001/000.p/1"
+    }
+  ]
 }

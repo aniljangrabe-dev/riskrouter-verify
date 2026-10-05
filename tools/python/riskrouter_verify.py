@@ -24,6 +24,8 @@ FILE may be any of:
     a record bundle                 riskrouter-record-bundle|1           (a record, its salt, and its evidence proof)
     an RFC 3161 head timestamp      riskrouter-head-timestamp|1          (--key checks our signature on the head too)
     a list of v1 ledger rows
+    a C2SP checkpoint (signed note)  c2sp.org/tlog-checkpoint           (needs --vkey; --witness-vkey, repeatable)
+    a SCITT COSE Receipt, or a Transparent Statement carrying ours (binary; needs --key; --statement optional)
 
 Exit status: 0 verified, 1 not verified, 2 usage.
 """
@@ -877,6 +879,370 @@ def verify_cosignature(doc, witness_key, published=None):
     return {"ok": True, "tree_size": head["tree_size"], "root_hash": head["root_hash"]}
 
 
+# ------------------------------------ C2SP checkpoints and cosignatures (Ed25519)
+# c2sp.org/signed-note, tlog-checkpoint and tlog-cosignature, as the public
+# witness network speaks them (docs/transparency-log.md). Ed25519 verification
+# from RFC 8032, section 5.1.7, in plain integers.
+
+_ED_P = 2 ** 255 - 19
+_ED_L = 2 ** 252 + 27742317777372353535851937790883648493
+_ED_D = -121665 * pow(121666, _ED_P - 2, _ED_P) % _ED_P
+_ED_I = pow(2, (_ED_P - 1) // 4, _ED_P)
+
+
+def _ed_add(p, q):
+    a = (p[1] - p[0]) * (q[1] - q[0]) % _ED_P
+    b = (p[1] + p[0]) * (q[1] + q[0]) % _ED_P
+    c = 2 * p[3] * q[3] * _ED_D % _ED_P
+    d = 2 * p[2] * q[2] % _ED_P
+    e, f, g, h = b - a, d - c, d + c, b + a
+    return (e * f % _ED_P, g * h % _ED_P, f * g % _ED_P, e * h % _ED_P)
+
+
+def _ed_mul(s, p):
+    q = (0, 1, 1, 0)
+    while s > 0:
+        if s & 1:
+            q = _ed_add(q, p)
+        p = _ed_add(p, p)
+        s >>= 1
+    return q
+
+
+def _ed_equal(p, q):
+    return (p[0] * q[2] - q[0] * p[2]) % _ED_P == 0 and (p[1] * q[2] - q[1] * p[2]) % _ED_P == 0
+
+
+def _ed_recover_x(y, sign):
+    if y >= _ED_P:
+        return None
+    x2 = (y * y - 1) * pow(_ED_D * y * y + 1, _ED_P - 2, _ED_P) % _ED_P
+    if x2 == 0:
+        return None if sign else 0
+    x = pow(x2, (_ED_P + 3) // 8, _ED_P)
+    if (x * x - x2) % _ED_P != 0:
+        x = x * _ED_I % _ED_P
+    if (x * x - x2) % _ED_P != 0:
+        return None
+    if (x & 1) != sign:
+        x = _ED_P - x
+    return x
+
+
+def _ed_decompress(b):
+    if len(b) != 32:
+        return None
+    y = int.from_bytes(b, "little")
+    sign = y >> 255
+    y &= (1 << 255) - 1
+    x = _ed_recover_x(y, sign)
+    return None if x is None else (x, y, 1, x * y % _ED_P)
+
+
+_ED_GY = 4 * pow(5, _ED_P - 2, _ED_P) % _ED_P
+_ED_G = (_ed_recover_x(_ED_GY, 0), _ED_GY, 1, _ed_recover_x(_ED_GY, 0) * _ED_GY % _ED_P)
+
+
+def ed25519_verify(public, message, signature):
+    if len(public) != 32 or len(signature) != 64:
+        return False
+    a = _ed_decompress(public)
+    r = _ed_decompress(signature[:32])
+    if a is None or r is None:
+        return False
+    s = int.from_bytes(signature[32:], "little")
+    if s >= _ED_L:
+        return False
+    h = int.from_bytes(hashlib.sha512(signature[:32] + public + message).digest(), "little") % _ED_L
+    return _ed_equal(_ed_mul(s, _ED_G), _ed_add(r, _ed_mul(h, a)))
+
+
+def note_key_id(name, sig_type, public):
+    return hashlib.sha256(name.encode("utf-8") + b"\n" + bytes([sig_type]) + public).digest()[:4].hex()
+
+
+def parse_vkey(vkey):
+    # The key material is base64, which may itself contain "+": split at the first two only.
+    parts = vkey.strip().split("+", 2)
+    if len(parts) != 3 or not parts[0] or re.search(r"\s", parts[0]):
+        raise ValueError("a vkey is name+keyid+key")
+    name, kid, material = parts
+    raw = base64.b64decode(material, validate=True)
+    if raw[0] not in (0x01, 0x04) or len(raw) != 33:
+        raise ValueError("only Ed25519 note keys (0x01) and cosignature/v1 keys (0x04) are supported")
+    if note_key_id(name, raw[0], raw[1:]) != kid:
+        raise ValueError("the vkey's key ID does not match its name and key")
+    return {"name": name, "id": kid, "type": raw[0], "public": raw[1:]}
+
+
+def parse_note(note):
+    if re.search(r"[\x00-\x09\x0b-\x1f]", note):
+        raise ValueError("a note may contain no control characters other than newline")
+    split = note.rfind("\n\n")
+    if split < 0 or not note.endswith("\n"):
+        raise ValueError("a note has a text, a blank line, then signatures")
+    text = note[:split + 1]
+    sigs = []
+    for line in note[split + 2:-1].split("\n"):
+        m = re.match(r"^— (\S+) ([A-Za-z0-9+/]+={0,2})$", line)
+        if not m:
+            raise ValueError("not a signature line: " + line[:80])
+        raw = base64.b64decode(m.group(2), validate=True)
+        sigs.append({"name": m.group(1), "id": raw[:4].hex(), "sig": raw[4:]})
+    return text, sigs
+
+
+def verify_note(note, vkeys):
+    """c2sp.org/signed-note: unknown keys are ignored, a known key that fails rejects the note, one must verify."""
+    try:
+        text, sigs = parse_note(note)
+    except ValueError as e:
+        return {"ok": False, "reason": str(e)}
+    verified = []
+    for s in sigs:
+        k = next((k for k in vkeys if k["name"] == s["name"] and k["id"] == s["id"]), None)
+        if k is None:
+            continue
+        if k["type"] == 0x01:
+            ok, ts = len(s["sig"]) == 64 and ed25519_verify(k["public"], text.encode("utf-8"), s["sig"]), None
+        else:
+            ts = int.from_bytes(s["sig"][:8], "big") if len(s["sig"]) == 72 else None
+            message = ("cosignature/v1\ntime %d\n" % ts + text).encode("utf-8") if ts is not None else b""
+            ok = ts is not None and ed25519_verify(k["public"], message, s["sig"][8:])
+        if not ok:
+            return {"ok": False, "reason": "the signature by %s (%s) does not verify" % (s["name"], s["id"])}
+        verified.append({"name": k["name"], "type": k["type"], "timestamp": ts})
+    if not verified:
+        return {"ok": False, "reason": "no signature from a key you trust"}
+    return {"ok": True, "text": text, "verified": verified}
+
+
+def parse_checkpoint(text):
+    lines = text.split("\n")
+    if lines.pop() != "" or len(lines) < 3 or any(not l for l in lines):
+        raise ValueError("a checkpoint has an origin, a size and a root, each on its own line")
+    if not re.match(r"^(0|[1-9][0-9]*)$", lines[1]):
+        raise ValueError("the size is a decimal with no leading zeroes")
+    root = base64.b64decode(lines[2], validate=True)
+    if len(root) != 32:
+        raise ValueError("the root is 32 bytes")
+    return {"origin": lines[0], "tree_size": int(lines[1]), "root_hash": root.hex(), "extensions": lines[3:]}
+
+
+def verify_checkpoint(note, log_vkey, witness_vkeys=()):
+    """Our signature must verify; each known witness's cosignature is checked and reported."""
+    log_key = parse_vkey(log_vkey)
+    results = []
+    ours = verify_note(note, [log_key])
+    if not ours["ok"]:
+        return [(False, ours["reason"])]
+    cp = parse_checkpoint(ours["text"])
+    if cp["origin"] != log_key["name"]:
+        return [(False, "the checkpoint names origin %s, not %s" % (cp["origin"], log_key["name"]))]
+    results.append((True, "our signature holds: tree_size %d, root %s, origin %s" % (cp["tree_size"], cp["root_hash"], cp["origin"])))
+    for wv in witness_vkeys:
+        wk = parse_vkey(wv)
+        if not any(l.startswith("— %s " % wk["name"]) for l in note.split("\n")):
+            continue
+        w = verify_note(note, [wk])
+        results.append((w["ok"], "%s cosigned it at %s" % (wk["name"], datetime.fromtimestamp(w["verified"][0]["timestamp"], timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"))
+                        if w["ok"] else "%s: %s" % (wk["name"], w["reason"])))
+    return results
+
+
+# ------------------------------------------------------ SCITT COSE Receipts
+# RFC 9942 receipts from the log (docs/scitt.md): COSE_Sign1, ES256, vds 395 = 1
+# (RFC9162_SHA256), inclusion proof at vdp 396 / -1, detached payload = the root.
+# A small strict CBOR reader and writer, enough for these structures.
+
+class _Tag(object):
+    def __init__(self, tag, value):
+        self.tag, self.value = tag, value
+
+
+def cbor_decode(data):
+    pos = [0]
+
+    def need(n):
+        if pos[0] + n > len(data):
+            raise ValueError("CBOR ends early")
+
+    def arg(info):
+        if info < 24:
+            return info
+        size = {24: 1, 25: 2, 26: 4, 27: 8}.get(info)
+        if size is None:
+            raise ValueError("indefinite lengths are not accepted")
+        need(size)
+        v = int.from_bytes(data[pos[0]:pos[0] + size], "big")
+        pos[0] += size
+        return v
+
+    def item(depth):
+        if depth > 16:
+            raise ValueError("CBOR nested too deep")
+        need(1)
+        ib = data[pos[0]]
+        pos[0] += 1
+        major, info = ib >> 5, ib & 0x1F
+        if major == 7:
+            simple = {20: False, 21: True, 22: None}
+            if info not in simple:
+                raise ValueError("floats and simple values are not accepted")
+            return simple[info]
+        n = arg(info)
+        if major == 0:
+            return n
+        if major == 1:
+            return -1 - n
+        if major in (2, 3):
+            need(n)
+            v = data[pos[0]:pos[0] + n]
+            pos[0] += n
+            return bytes(v) if major == 2 else v.decode("utf-8")
+        if major == 4:
+            return [item(depth + 1) for _ in range(n)]
+        if major == 5:
+            m = {}
+            for _ in range(n):
+                k = item(depth + 1)
+                if k in m:
+                    raise ValueError("a map key appears twice")
+                m[k] = item(depth + 1)
+            return m
+        if major == 6:
+            return _Tag(n, item(depth + 1))
+        raise ValueError("unknown CBOR major type")
+
+    v = item(0)
+    if pos[0] != len(data):
+        raise ValueError("bytes after the CBOR item")
+    return v
+
+
+def _cbor_head(major, n):
+    if n < 24:
+        return bytes([(major << 5) | n])
+    for size, info in ((1, 24), (2, 25), (4, 26), (8, 27)):
+        if n < 256 ** size:
+            return bytes([(major << 5) | info]) + n.to_bytes(size, "big")
+    raise ValueError("too large")
+
+
+def cbor_encode(v):
+    """Enough for Sig_structure and a registered statement: text, bytes, arrays, maps, tags, small ints."""
+    if isinstance(v, _Tag):
+        return _cbor_head(6, v.tag) + cbor_encode(v.value)
+    if isinstance(v, bytes):
+        return _cbor_head(2, len(v)) + v
+    if isinstance(v, str):
+        b = v.encode("utf-8")
+        return _cbor_head(3, len(b)) + b
+    if isinstance(v, list):
+        return _cbor_head(4, len(v)) + b"".join(cbor_encode(x) for x in v)
+    if isinstance(v, dict):
+        return _cbor_head(5, len(v)) + b"".join(cbor_encode(k) + cbor_encode(x) for k, x in v.items())
+    if isinstance(v, int) and not isinstance(v, bool):
+        return _cbor_head(0, v) if v >= 0 else _cbor_head(1, -1 - v)
+    raise ValueError("cannot encode %r" % (v,))
+
+
+def _sign1(data):
+    t = cbor_decode(data)
+    if not isinstance(t, _Tag) or t.tag != 18 or not isinstance(t.value, list) or len(t.value) != 4:
+        raise ValueError("not a tagged COSE_Sign1")
+    prot_bytes, unprot, payload, sig = t.value
+    return prot_bytes, (cbor_decode(prot_bytes) if prot_bytes else {}), unprot, payload, sig
+
+
+def statement_digest(data):
+    """SHA-256 of the Signed Statement with its unprotected header emptied: its record_digest in the log."""
+    prot_bytes, _, _, payload, sig = _sign1(data)
+    return hashlib.sha256(cbor_encode(_Tag(18, [prot_bytes, {}, payload, sig]))).hexdigest()
+
+
+def _root_from_path(index, size, leaf, path):
+    if index < 0 or index >= size:
+        return None
+    fn, sn, r = index, size - 1, leaf
+    for p in path:
+        if sn == 0:
+            return None
+        if fn % 2 == 1 or fn == sn:
+            r = node_hash(p, r)
+            if fn % 2 == 0:
+                while fn % 2 == 0 and fn != 0:
+                    fn //= 2
+                    sn //= 2
+        else:
+            r = node_hash(r, p)
+        fn //= 2
+        sn //= 2
+    return r if sn == 0 else None
+
+
+def verify_receipt(data, published, statement=None):
+    """Rebuild the leaf from the receipt, walk the inclusion proof to a root, check our ES256 signature over it."""
+    try:
+        prot_bytes, prot, unprot, _, sig = _sign1(data)
+    except ValueError as e:
+        return {"ok": False, "reason": "not a receipt: %s" % e}
+    if prot.get(1) != -7 or prot.get(395) != 1 or prot.get("riskrouter-profile") != "riskrouter-scitt-receipt|1":
+        return {"ok": False, "reason": "not an ES256 RFC9162_SHA256 riskrouter-scitt-receipt|1"}
+    cwt, fields = prot.get(15) or {}, prot.get("riskrouter-leaf")
+    digest = cwt.get(2)
+    if not isinstance(digest, str) or not HEX64.match(digest) or not isinstance(fields, list) or len(fields) != 4:
+        return {"ok": False, "reason": "the receipt does not carry the leaf it proves"}
+    proofs = (unprot.get(396) or {}).get(-1) if isinstance(unprot, dict) else None
+    if not isinstance(proofs, list) or len(proofs) != 1:
+        return {"ok": False, "reason": "the receipt carries no single inclusion proof"}
+    tree_size, proof_index, path = cbor_decode(proofs[0])
+    leaf_index, created_at, distributor_id, kind = fields
+    if proof_index != leaf_index:
+        return {"ok": False, "reason": "the inclusion proof is for another leaf than the receipt names"}
+    leaf = leaf_hash(leaf_string({"leaf_index": leaf_index, "created_at": created_at, "distributor_id": distributor_id,
+                                  "kind": kind, "record_digest": digest}).encode("utf-8"))
+    root = _root_from_path(leaf_index, tree_size, leaf, [p.hex() for p in path])
+    if root is None:
+        return {"ok": False, "reason": "the inclusion proof does not lead to a root"}
+    key = pick_key(published, prot.get(4, b"").decode("utf-8", "replace"))
+    if key is None:
+        return {"ok": False, "reason": "signed with a key that is not among the keys you trust"}
+    tbs = cbor_encode(["Signature1", prot_bytes, b"", bytes.fromhex(root)])
+    if not ecdsa_p256_verify(key["public_key"], tbs, base64.b64encode(sig).decode("ascii")):
+        return {"ok": False, "reason": "our signature over the root does not verify: the receipt was changed, or is not for this leaf"}
+    if statement is not None and statement_digest(statement) != digest:
+        return {"ok": False, "reason": "the receipt is for another statement"}
+    return {"ok": True, "tree_size": tree_size, "leaf_index": leaf_index, "root_hash": root, "statement_digest": digest, "kind": kind}
+
+
+def _cose_main(path, argv):
+    with open(path, "rb") as fh:
+        data = fh.read()
+    key_path = _arg(argv, "--key")
+    if not key_path:
+        print("a receipt is checked against our published key: pass --key (a key file, or anchors/)", file=sys.stderr)
+        return 2
+    published = load_keyring(key_path)
+    try:
+        _, prot, unprot, _, _ = _sign1(data)
+    except ValueError as e:
+        print("FAIL  not a COSE_Sign1: %s" % e)
+        return 1
+    failed = False
+    statement_path = _arg(argv, "--statement")
+    if isinstance(unprot, dict) and 394 in unprot:
+        results = [verify_receipt(r, published, data) for r in unprot[394]]   # a Transparent Statement
+    else:
+        stmt = open(statement_path, "rb").read() if statement_path else None
+        results = [verify_receipt(data, published, stmt)]
+    for r in results:
+        print(("OK    statement %s is leaf %d in a tree of %d leaves with root %s; we signed that root"
+               % (r["statement_digest"], r["leaf_index"], r["tree_size"], r["root_hash"])) if r["ok"] else "FAIL  " + r["reason"])
+        failed = failed or not r["ok"]
+    return 1 if failed else 0
+
+
 # ----------------------------------------------------------------- self-test
 
 def self_test():
@@ -895,6 +1261,12 @@ def self_test():
         assert root_hash(leaves[:n]) == roots[n - 1], "RFC 6962 root %d" % n
     assert root_hash([]) == EMPTY_ROOT
     assert _on_curve(G)
+    # RFC 8032, section 7.1, test 2: one byte, and the same byte changed.
+    pub = bytes.fromhex("3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c")
+    sig = bytes.fromhex("92a009a9f0d4cab8720e820b5f642540a2b27b5416503f8fb3762223ebdb69da"
+                        "085ac1e43e15996e458f3613d0f11d8c387b2eaeb4302aeeb00d291612bb0c00")
+    assert ed25519_verify(pub, bytes([0x72]), sig)
+    assert not ed25519_verify(pub, bytes([0x73]), sig)
     return True
 
 
@@ -913,15 +1285,51 @@ def _load(path):
         return json.load(fh)
 
 
+def _args(argv, name):
+    return [argv[i + 1] for i, a in enumerate(argv) if a == name and i + 1 < len(argv)]
+
+
+def _vkey(value):
+    return open(value, "r", encoding="utf-8").read().strip() if os.path.isfile(value) else value.strip()
+
+
+def _checkpoint_main(path, argv):
+    """A C2SP checkpoint note; beside checkpoint.txt, any *.cosignature lines are read too."""
+    with open(path, "r", encoding="utf-8") as fh:
+        note = fh.read()
+    if os.path.basename(path) == "checkpoint.txt":
+        folder = os.path.dirname(path) or "."
+        for f in sorted(os.listdir(folder)):
+            if f.endswith(".cosignature"):
+                with open(os.path.join(folder, f), "r", encoding="utf-8") as fh:
+                    note += fh.read()
+    vkey = _arg(argv, "--vkey")
+    if not vkey:
+        print("a checkpoint is checked against the log's published key: pass --vkey (the vkey, or a file holding it)", file=sys.stderr)
+        return 2
+    failed = False
+    for ok, line in verify_checkpoint(note, _vkey(vkey), [_vkey(v) for v in _args(argv, "--witness-vkey")]):
+        print(("OK    " if ok else "FAIL  ") + line)
+        failed = failed or not ok
+    return 1 if failed else 0
+
+
 def main(argv):
     if "--self-test" in argv:
         self_test()
-        print("OK    RFC 6962 reference roots and the P-256 curve check out")
+        print("OK    RFC 6962 reference roots, the P-256 curve and RFC 8032 Ed25519 check out")
         return 0
     files = [a for i, a in enumerate(argv) if not a.startswith("--") and (i == 0 or not argv[i - 1].startswith("--"))]
     if not files:
         print(__doc__.strip(), file=sys.stderr)
         return 2
+    with open(files[0], "rb") as fh:
+        if fh.read(1) == b"\xd2":        # a tagged COSE_Sign1: a receipt or a Transparent Statement
+            return _cose_main(files[0], argv)
+    with open(files[0], "r", encoding="utf-8") as fh:
+        head = fh.read(4096)
+    if not head.lstrip().startswith(("{", "[")) and "\n\n\u2014 " in open(files[0], "r", encoding="utf-8").read():
+        return _checkpoint_main(files[0], argv)
     doc = _load(files[0])
     key_path = _arg(argv, "--key")
     published = load_keyring(key_path) if key_path else None

@@ -1,0 +1,4 @@
+{
+  "about": "The C2SP witnesses our checkpoints are posted to (c2sp.org/tlog-witness), by tools/checkpoint.mjs push, hourly. Each entry is copied from that witness's own about page, only after the witness network has accepted this log: name, vkey (type 0x04), url (the add-checkpoint URL) and about (where the vkey was read). docs/transparency-log.md.",
+  "witnesses": []
+}

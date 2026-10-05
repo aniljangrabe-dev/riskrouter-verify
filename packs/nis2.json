@@ -1,0 +1,416 @@
+{
+ "format": "riskrouter-regime-pack|1",
+ "id": "nis2",
+ "version": 1,
+ "title": "Security incidents and logs: NIS2 incident handling and reporting, and personal-data breaches",
+ "regime": "NIS2 and data breaches",
+ "summary": "What an organisation records so that, after a security incident, it can show which logs existed before the incident, what it knew and when, what it did, and what it reported to whom.",
+ "instruments": [
+  {
+   "id": "nis2",
+   "name": "Directive (EU) 2022/2555 (NIS2 Directive)",
+   "celex": "32022L2555",
+   "source": "https://eur-lex.europa.eu/eli/dir/2022/2555/oj/eng"
+  },
+  {
+   "id": "gdpr",
+   "name": "Regulation (EU) 2016/679 (General Data Protection Regulation)",
+   "celex": "32016R0679",
+   "source": "https://eur-lex.europa.eu/eli/reg/2016/679/oj/eng"
+  }
+ ],
+ "articles": [
+  {
+   "id": "nis2-21-1",
+   "instrument": "nis2",
+   "ref": "Article 21(1)",
+   "asks": "Essential and important entities take appropriate and proportionate technical, operational and organisational measures to manage the risks posed to the security of the network and information systems they use."
+  },
+  {
+   "id": "nis2-21-2-b",
+   "instrument": "nis2",
+   "ref": "Article 21(2)(b)",
+   "asks": "Those measures include incident handling."
+  },
+  {
+   "id": "nis2-23-1",
+   "instrument": "nis2",
+   "ref": "Article 23(1)",
+   "asks": "Notify the CSIRT or, where applicable, the competent authority without undue delay of any significant incident, and where appropriate the recipients of the services concerned."
+  },
+  {
+   "id": "nis2-23-4",
+   "instrument": "nis2",
+   "ref": "Article 23(4)",
+   "asks": "For a significant incident: an early warning within 24 hours of becoming aware of it, an incident notification within 72 hours, an intermediate report on request, and a final report within one month of the incident notification."
+  },
+  {
+   "id": "gdpr-33-1",
+   "instrument": "gdpr",
+   "ref": "Article 33(1)",
+   "asks": "Notify a personal data breach to the supervisory authority without undue delay and, where feasible, within 72 hours of becoming aware of it, unless it is unlikely to result in a risk to people's rights and freedoms; a later notification gives the reasons for the delay."
+  },
+  {
+   "id": "gdpr-33-5",
+   "instrument": "gdpr",
+   "ref": "Article 33(5)",
+   "asks": "Document every personal data breach, comprising the facts relating to it, its effects and the remedial action taken, so the supervisory authority can verify compliance with the article."
+  },
+  {
+   "id": "gdpr-34-1",
+   "instrument": "gdpr",
+   "ref": "Article 34(1)",
+   "asks": "When a breach is likely to result in a high risk to people's rights and freedoms, communicate it to the people concerned without undue delay."
+  }
+ ],
+ "kinds": [
+  {
+   "kind": "security.log-segment",
+   "title": "Log segment sealed",
+   "when": "Each time a segment of a system's log is closed: after a number of lines, a number of seconds, or a file rotation. The logseal tool in the recorder kit does this for you.",
+   "fields": [
+    {
+     "name": "source_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your reference for the system or log source, such as fw-edge-1 or auth-server.",
+     "evidences": [
+      "nis2-21-1",
+      "nis2-21-2-b"
+     ]
+    },
+    {
+     "name": "segment_index",
+     "type": "integer",
+     "min": 0,
+     "required": true,
+     "description": "The position of this segment in its source's sequence, from 0, so a missing segment is caught.",
+     "evidences": [
+      "nis2-21-2-b"
+     ]
+    },
+    {
+     "name": "segment_start",
+     "type": "timestamp",
+     "required": true,
+     "description": "When the segment was opened, UTC.",
+     "evidences": [
+      "nis2-21-2-b",
+      "gdpr-33-5"
+     ]
+    },
+    {
+     "name": "segment_end",
+     "type": "timestamp",
+     "required": true,
+     "description": "When the segment was closed, UTC.",
+     "evidences": [
+      "nis2-21-2-b",
+      "gdpr-33-5"
+     ]
+    },
+    {
+     "name": "line_count",
+     "type": "integer",
+     "min": 0,
+     "required": true,
+     "description": "How many lines the segment holds, so a shortened segment is caught.",
+     "evidences": [
+      "nis2-21-2-b"
+     ]
+    },
+    {
+     "name": "log_digest",
+     "type": "digest",
+     "required": true,
+     "description": "SHA-256 of the segment exactly as archived.",
+     "evidences": [
+      "nis2-21-1",
+      "nis2-21-2-b",
+      "gdpr-33-5"
+     ]
+    },
+    {
+     "name": "log_format",
+     "type": "string",
+     "max_length": 80,
+     "required": false,
+     "description": "The format of the lines, such as syslog, journald-json or cloudtrail-json.",
+     "evidences": []
+    },
+    {
+     "name": "previous_segment_record_id",
+     "type": "reference",
+     "required": false,
+     "description": "The record_id of the segment before this one, so a removed segment is caught.",
+     "evidences": [
+      "nis2-21-2-b"
+     ]
+    }
+   ],
+   "example": {
+    "pack": "nis2",
+    "pack_version": 1,
+    "kind": "security.log-segment",
+    "record_id": "auth-server-seg-0000000412",
+    "source_ref": "auth-server",
+    "segment_index": 412,
+    "segment_start": "2026-10-01T09:00:00.000Z",
+    "segment_end": "2026-10-01T09:01:00.000Z",
+    "line_count": 1932,
+    "log_digest": "9b74c9897bac770ffc029102a200c5de0f2e5c7b7c4dcd9c9fd0e2e4f0b5f1a2",
+    "log_format": "syslog",
+    "previous_segment_record_id": "auth-server-seg-0000000411"
+   }
+  },
+  {
+   "kind": "security.incident",
+   "title": "Incident recorded at a stage",
+   "when": "At each stage of a security incident: detected, assessed, contained, resolved, closed.",
+   "fields": [
+    {
+     "name": "incident_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your reference for the incident.",
+     "evidences": [
+      "nis2-21-2-b",
+      "gdpr-33-5"
+     ]
+    },
+    {
+     "name": "stage",
+     "type": "enum",
+     "values": [
+      "detected",
+      "assessed",
+      "contained",
+      "resolved",
+      "closed"
+     ],
+     "required": true,
+     "description": "The stage this record captures.",
+     "evidences": [
+      "nis2-21-2-b"
+     ]
+    },
+    {
+     "name": "significant",
+     "type": "enum",
+     "values": [
+      "yes",
+      "no",
+      "not-yet-assessed"
+     ],
+     "required": true,
+     "description": "Whether you consider it a significant incident under NIS2 at this stage.",
+     "evidences": [
+      "nis2-23-1"
+     ]
+    },
+    {
+     "name": "personal_data_breach",
+     "type": "enum",
+     "values": [
+      "yes",
+      "no",
+      "not-yet-known"
+     ],
+     "required": true,
+     "description": "Whether it is a personal data breach, as known at this stage.",
+     "evidences": [
+      "gdpr-33-5"
+     ]
+    },
+    {
+     "name": "description",
+     "type": "text",
+     "required": true,
+     "description": "The facts, as known at this stage. Refer to people by your own references, never by name.",
+     "evidences": [
+      "nis2-21-2-b",
+      "gdpr-33-5"
+     ]
+    },
+    {
+     "name": "effects",
+     "type": "text",
+     "required": false,
+     "description": "Its effects, as known at this stage.",
+     "evidences": [
+      "gdpr-33-5"
+     ]
+    },
+    {
+     "name": "actions",
+     "type": "text",
+     "required": false,
+     "description": "The remedial action taken, and what will be done to prevent recurrence.",
+     "evidences": [
+      "nis2-21-2-b",
+      "gdpr-33-5"
+     ]
+    },
+    {
+     "name": "aware_at",
+     "type": "timestamp",
+     "required": true,
+     "description": "When you became aware of the incident, UTC: the reporting deadlines run from here.",
+     "evidences": [
+      "nis2-23-4",
+      "gdpr-33-1"
+     ]
+    },
+    {
+     "name": "stage_at",
+     "type": "timestamp",
+     "required": true,
+     "description": "When this stage was reached, UTC.",
+     "evidences": [
+      "nis2-21-2-b"
+     ]
+    },
+    {
+     "name": "log_segment_record_ids",
+     "type": "list",
+     "items": {
+      "type": "reference"
+     },
+     "required": false,
+     "description": "The record_ids of the sealed log segments that cover the incident.",
+     "evidences": [
+      "nis2-21-2-b",
+      "gdpr-33-5"
+     ]
+    }
+   ],
+   "example": {
+    "pack": "nis2",
+    "pack_version": 1,
+    "kind": "security.incident",
+    "record_id": "sec-2026-0007-assessed",
+    "incident_ref": "sec-2026-0007",
+    "stage": "assessed",
+    "significant": "yes",
+    "personal_data_breach": "not-yet-known",
+    "description": "Repeated logins to the administration portal from an address outside the usual range, using a valid account, between 02:10 and 02:40 UTC.",
+    "effects": "One administrator account used without authorisation; whether data was read is being established.",
+    "actions": "Account disabled and its sessions revoked; credentials of all administrators rotated.",
+    "aware_at": "2026-10-01T06:15:00Z",
+    "stage_at": "2026-10-01T09:30:00Z",
+    "log_segment_record_ids": [
+     "auth-server-seg-0000000250",
+     "auth-server-seg-0000000251"
+    ]
+   }
+  },
+  {
+   "kind": "security.notification",
+   "title": "Report or notification sent",
+   "when": "Each time something is sent about an incident: an early warning, a notification, an intermediate or final report, a breach notification, a communication to the people concerned.",
+   "fields": [
+    {
+     "name": "incident_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your reference for the incident.",
+     "evidences": [
+      "nis2-23-4",
+      "gdpr-33-1"
+     ]
+    },
+    {
+     "name": "stage",
+     "type": "enum",
+     "values": [
+      "early-warning",
+      "incident-notification",
+      "intermediate-report",
+      "final-report",
+      "breach-notification",
+      "data-subject-communication"
+     ],
+     "required": true,
+     "description": "What was sent.",
+     "evidences": [
+      "nis2-23-4",
+      "gdpr-33-1",
+      "gdpr-34-1"
+     ]
+    },
+    {
+     "name": "recipient",
+     "type": "enum",
+     "values": [
+      "csirt",
+      "competent-authority",
+      "supervisory-authority",
+      "service-recipients",
+      "data-subjects"
+     ],
+     "required": true,
+     "description": "To whom it was sent.",
+     "evidences": [
+      "nis2-23-1",
+      "gdpr-33-1",
+      "gdpr-34-1"
+     ]
+    },
+    {
+     "name": "aware_at",
+     "type": "timestamp",
+     "required": true,
+     "description": "When you became aware of the incident, UTC, as stated in what was sent.",
+     "evidences": [
+      "nis2-23-4",
+      "gdpr-33-1"
+     ]
+    },
+    {
+     "name": "submitted_at",
+     "type": "timestamp",
+     "required": true,
+     "description": "When it was sent, UTC.",
+     "evidences": [
+      "nis2-23-4",
+      "gdpr-33-1"
+     ]
+    },
+    {
+     "name": "report_digest",
+     "type": "digest",
+     "required": true,
+     "description": "SHA-256 of what was sent, exactly as sent, so the copy you keep can be shown to be the one you sent.",
+     "evidences": [
+      "nis2-23-4",
+      "gdpr-33-1",
+      "gdpr-33-5"
+     ]
+    },
+    {
+     "name": "delay_reason",
+     "type": "text",
+     "required": false,
+     "description": "Why it was sent after the deadline, if it was.",
+     "evidences": [
+      "gdpr-33-1"
+     ]
+    }
+   ],
+   "example": {
+    "pack": "nis2",
+    "pack_version": 1,
+    "kind": "security.notification",
+    "record_id": "sec-2026-0007-early-warning",
+    "incident_ref": "sec-2026-0007",
+    "stage": "early-warning",
+    "recipient": "csirt",
+    "aware_at": "2026-10-01T06:15:00Z",
+    "submitted_at": "2026-10-01T14:02:00Z",
+    "report_digest": "4a5c1f0e9d8b7a6958473625140f1e2d3c4b5a69788796a5b4c3d2e1f0011223"
+   }
+  }
+ ],
+ "retention": "Neither NIS2 nor GDPR Article 33(5) states how long to keep these records, and this pack does not decide it for you. Check the period with your competent authority or supervisory authority.",
+ "notes": "The logs never leave you: the logseal tool in the recorder kit archives each segment on your own storage and sends only the digest of its record. A segment sealed before an intruder controlled the machine that writes it cannot be changed afterwards without it showing; what that machine writes once it is controlled can be forged at the source, and no seal changes that. Financial entities under DORA report ICT incidents under DORA, whose own pack covers them."
+}

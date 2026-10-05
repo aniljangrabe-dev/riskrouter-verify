@@ -38,6 +38,8 @@ import { leafHash, leafString, rootHash, headPayload, canonicalTimestamp, verify
 import { loadKeyring, pickKey } from './keyring.mjs';
 import { canonicalRecord, recordDigest, acceptableRecord, checkBundleRecord, BUNDLE_FORMAT } from './records.mjs';
 import { verifyTimestampFile, TIMESTAMP_FORMAT } from './tsa.mjs';
+import { checkpointText, keyId, verifyNote, tilePath } from './note.mjs';
+import { statementDigest, parseSign1, sigStructure } from './cose.mjs';
 
 export const RESULT_FORMAT = 'riskrouter-conformance-result|1';
 export const ANSWERS_FORMAT = 'riskrouter-conformance-answers|1';
@@ -114,6 +116,30 @@ export function buildCases(v) {
   const cs = v.v2_cosignature;
   add('v2.cosign_payload', { witness_id: cs.witness_id, tree_size: cs.tree_size, root_hash: cs.root_hash, cosigned_at: cs.cosigned_at }, cs.payload);
 
+  // C2SP checkpoints (docs/transparency-log.md): the frozen text, key IDs, both
+  // signature types, and the same notes with one byte changed, which must fail.
+  if (v.checkpoint) {
+    const cp = v.checkpoint;
+    const cw = v.cosignature_v1;
+    const pub = (vk) => vk.split('+').slice(2).join('+');
+    add('checkpoint.text', { origin: cp.origin, tree_size: cp.tree_size, root_hash: cp.root_hash }, cp.text);
+    add('note.key_id', { name: cp.origin, type: 1, public_key_b64: Buffer.from(pub(cp.vkey), 'base64').subarray(1).toString('base64') }, cp.key_id);
+    add('note.key_id', { name: cw.name, type: 4, public_key_b64: Buffer.from(pub(cw.vkey), 'base64').subarray(1).toString('base64') }, cw.key_id);
+    add('note.verify', { note: cp.note, vkeys: [cp.vkey] }, true);
+    add('note.verify', { note: cw.note, vkeys: [cw.vkey] }, true);
+    add('note.verify', { note: cw.note, vkeys: [cp.vkey, cw.vkey] }, true);
+    add('note.verify', { note: cp.note.replace(`\n${cp.tree_size}\n`, `\n${cp.tree_size + 1}\n`), vkeys: [cp.vkey] }, false);
+    add('note.verify', { note: cw.note.replace(`${cp.tree_size}\n`, `${cp.tree_size + 1}\n`), vkeys: [cw.vkey] }, false);
+    add('note.verify', { note: cp.note, vkeys: [cw.vkey] }, false);
+    for (const t of v.tiles || []) add('tile.path', { level: t.level, index: t.index, width: t.width }, t.path);
+  }
+
+  // SCITT (docs/scitt.md): the statement digest, and the bytes a receipt signs.
+  if (v.scitt_statement) {
+    add('scitt.statement_digest', { statement_hex: v.scitt_statement.statement_hex }, v.scitt_statement.statement_digest);
+    add('cose.sig_structure', { protected_hex: v.scitt_receipt.protected_hex, payload_hex: v.scitt_receipt.root_hash }, v.scitt_receipt.sig_structure_hex);
+  }
+
   return { format: CASES_FORMAT, vectors: v.format, cases_digest: sha(JSON.stringify(cases)), cases };
 }
 
@@ -140,6 +166,12 @@ export async function referenceAnswer(c) {
     case 'record.digest': return recordDigest(i.salt_hex, i.record);
     case 'record.acceptable': return acceptableRecord(i.record);
     case 'v2.cosign_payload': return ['riskrouter-evidence-cosign', 'v2', i.witness_id, String(i.tree_size), i.root_hash, i.cosigned_at].join('|');
+    case 'checkpoint.text': return checkpointText(i);
+    case 'note.key_id': return keyId(i.name, i.type, Buffer.from(i.public_key_b64, 'base64'));
+    case 'note.verify': return (await verifyNote(i.note, i.vkeys)).ok;
+    case 'tile.path': return tilePath(i.level, i.index, i.width);
+    case 'scitt.statement_digest': return statementDigest(parseSign1(Buffer.from(i.statement_hex, 'hex')));
+    case 'cose.sig_structure': return Buffer.from(sigStructure(Buffer.from(i.protected_hex, 'hex'), Buffer.from(i.payload_hex, 'hex'))).toString('hex');
     default: throw new Error(`unknown operation ${c.op}`);
   }
 }
