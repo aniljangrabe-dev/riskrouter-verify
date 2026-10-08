@@ -1,94 +1,608 @@
 {
-  "format": "riskrouter-regime-pack|1",
-  "id": "ai-act",
-  "version": 1,
-  "title": "High-risk AI systems: logs, decisions and human oversight",
-  "regime": "EU AI Act",
-  "summary": "What a provider or deployer of a high-risk AI system records so that its logs, the decisions taken on the system's output, and the human oversight exercised over it can be shown later to be exactly what existed at the time.",
-  "instruments": [
-    { "id": "ai-act", "name": "Regulation (EU) 2024/1689 (Artificial Intelligence Act)", "celex": "32024R1689", "source": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng" }
-  ],
-  "articles": [
-    { "id": "ai-12-1", "instrument": "ai-act", "ref": "Article 12(1)", "asks": "High-risk AI systems must technically allow for the automatic recording of events (logs) over the lifetime of the system." },
-    { "id": "ai-12-2", "instrument": "ai-act", "ref": "Article 12(2)", "asks": "Logging must enable recording of events relevant for identifying situations that may result in the system presenting a risk or in a substantial modification, for post-market monitoring (Article 72), and for monitoring the system's operation (Article 26(5))." },
-    { "id": "ai-14-4-d", "instrument": "ai-act", "ref": "Article 14(4)(d)", "asks": "The people overseeing the system must be able to decide, in any particular situation, not to use it or to disregard, override or reverse its output." },
-    { "id": "ai-19-1", "instrument": "ai-act", "ref": "Article 19(1)", "asks": "Providers keep the logs their high-risk AI systems generate automatically, to the extent the logs are under their control, for a period appropriate to the system's intended purpose and of at least six months, unless Union or national law, in particular on personal data, provides otherwise." },
-    { "id": "ai-19-2", "instrument": "ai-act", "ref": "Article 19(2)", "asks": "Providers that are financial institutions subject to internal-governance requirements under Union financial services law keep those logs as part of the documentation kept under that law." },
-    { "id": "ai-26-6", "instrument": "ai-act", "ref": "Article 26(6)", "asks": "Deployers keep the logs the system generates automatically, to the extent the logs are under their control, for a period appropriate to the system's intended purpose and of at least six months, unless applicable law provides otherwise." },
-    { "id": "ai-86-1", "instrument": "ai-act", "ref": "Article 86(1)", "asks": "A person affected by a decision a deployer takes on the basis of output from a high-risk AI system listed in Annex III (other than point 2), with legal or similarly significant adverse effects, may obtain clear and meaningful explanations of the role of the AI system in the decision and of the main elements of the decision taken." }
-  ],
-  "kinds": [
+ "format": "riskrouter-regime-pack|1",
+ "id": "ai-act",
+ "version": 1,
+ "title": "High-risk AI systems: logs, decisions and human oversight",
+ "regime": "EU AI Act",
+ "summary": "What a provider or deployer of a high-risk AI system records so that its logs, the decisions taken on the system's output, and the human oversight exercised over it can be shown later to be exactly what existed at the time.",
+ "instruments": [
+  {
+   "id": "ai-act",
+   "name": "Regulation (EU) 2024/1689 (Artificial Intelligence Act)",
+   "celex": "32024R1689",
+   "source": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng"
+  }
+ ],
+ "articles": [
+  {
+   "id": "ai-12-1",
+   "instrument": "ai-act",
+   "ref": "Article 12(1)",
+   "asks": "High-risk AI systems must technically allow for the automatic recording of events (logs) over the lifetime of the system."
+  },
+  {
+   "id": "ai-12-2",
+   "instrument": "ai-act",
+   "ref": "Article 12(2)",
+   "asks": "Logging must enable recording of events relevant for identifying situations that may result in the system presenting a risk or in a substantial modification, for post-market monitoring (Article 72), and for monitoring the system's operation (Article 26(5))."
+  },
+  {
+   "id": "ai-14-4-d",
+   "instrument": "ai-act",
+   "ref": "Article 14(4)(d)",
+   "asks": "The people overseeing the system must be able to decide, in any particular situation, not to use it or to disregard, override or reverse its output."
+  },
+  {
+   "id": "ai-19-1",
+   "instrument": "ai-act",
+   "ref": "Article 19(1)",
+   "asks": "Providers keep the logs their high-risk AI systems generate automatically, to the extent the logs are under their control, for a period appropriate to the system's intended purpose and of at least six months, unless Union or national law, in particular on personal data, provides otherwise."
+  },
+  {
+   "id": "ai-19-2",
+   "instrument": "ai-act",
+   "ref": "Article 19(2)",
+   "asks": "Providers that are financial institutions subject to internal-governance requirements under Union financial services law keep those logs as part of the documentation kept under that law."
+  },
+  {
+   "id": "ai-26-6",
+   "instrument": "ai-act",
+   "ref": "Article 26(6)",
+   "asks": "Deployers keep the logs the system generates automatically, to the extent the logs are under their control, for a period appropriate to the system's intended purpose and of at least six months, unless applicable law provides otherwise."
+  },
+  {
+   "id": "ai-86-1",
+   "instrument": "ai-act",
+   "ref": "Article 86(1)",
+   "asks": "A person affected by a decision a deployer takes on the basis of output from a high-risk AI system listed in Annex III (other than point 2), with legal or similarly significant adverse effects, may obtain clear and meaningful explanations of the role of the AI system in the decision and of the main elements of the decision taken."
+  },
+  {
+   "id": "ai-50-2",
+   "instrument": "ai-act",
+   "ref": "Article 50(2)",
+   "asks": "Providers of AI systems, including general-purpose AI systems, that generate synthetic audio, image, video or text content ensure that the outputs are marked in a machine-readable format and detectable as artificially generated or manipulated, as far as technically feasible."
+  }
+ ],
+ "kinds": [
+  {
+   "kind": "ai.log-segment",
+   "title": "Log segment sealed",
+   "when": "Each time a segment of the system's automatic log is closed: every hour, every day, or every file rotation.",
+   "fields": [
     {
-      "kind": "ai.log-segment",
-      "title": "Log segment sealed",
-      "when": "Each time a segment of the system's automatic log is closed: every hour, every day, or every file rotation.",
-      "fields": [
-        { "name": "system_ref", "type": "reference", "required": true, "description": "Your reference for the AI system.", "evidences": ["ai-12-1"] },
-        { "name": "system_version", "type": "string", "max_length": 80, "required": true, "description": "The version of the system that produced the log.", "evidences": ["ai-12-2"] },
-        { "name": "role", "type": "enum", "values": ["provider", "deployer"], "required": true, "description": "Whether you keep this log as the provider or as a deployer.", "evidences": ["ai-19-1", "ai-26-6"] },
-        { "name": "segment_start", "type": "timestamp", "required": true, "description": "Time of the first event in the segment, UTC.", "evidences": ["ai-12-1"] },
-        { "name": "segment_end", "type": "timestamp", "required": true, "description": "Time of the last event in the segment, UTC.", "evidences": ["ai-12-1"] },
-        { "name": "event_count", "type": "integer", "min": 0, "required": true, "description": "How many events the segment holds, so a shortened log is caught.", "evidences": ["ai-12-1"] },
-        { "name": "log_digest", "type": "digest", "required": true, "description": "SHA-256 of the segment file exactly as stored.", "evidences": ["ai-12-1", "ai-19-1", "ai-26-6"] },
-        { "name": "log_format", "type": "string", "max_length": 80, "required": false, "description": "The format of the segment, such as jsonl.", "evidences": [] },
-        { "name": "previous_segment_record_id", "type": "reference", "required": false, "description": "The record_id of the segment before this one, so a missing segment is caught.", "evidences": ["ai-12-1"] },
-        { "name": "retain_until", "type": "date", "required": false, "description": "The date until which you have decided to keep this segment.", "evidences": ["ai-19-1", "ai-26-6", "ai-19-2"] }
-      ],
-      "example": {
-        "pack": "ai-act", "pack_version": 1, "kind": "ai.log-segment", "record_id": "log-credit-scorer-2026092611",
-        "system_ref": "credit-scorer", "system_version": "4.2.1", "role": "deployer",
-        "segment_start": "2026-09-26T11:00:00.000123Z", "segment_end": "2026-09-26T11:59:59.874012Z", "event_count": 1847,
-        "log_digest": "0f1e2d3c4b5a69788796a5b4c3d2e1f00112233445566778899aabbccddeeff0",
-        "log_format": "jsonl", "previous_segment_record_id": "log-credit-scorer-2026092610", "retain_until": "2027-09-30"
-      }
+     "name": "system_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your reference for the AI system.",
+     "evidences": [
+      "ai-12-1"
+     ]
     },
     {
-      "kind": "ai.decision",
-      "title": "Decision taken on the system's output",
-      "when": "When a decision about a person or a case is taken on the basis of the system's output.",
-      "fields": [
-        { "name": "system_ref", "type": "reference", "required": true, "description": "Your reference for the AI system.", "evidences": ["ai-12-2", "ai-86-1"] },
-        { "name": "system_version", "type": "string", "max_length": 80, "required": true, "description": "The version of the system that produced the output.", "evidences": ["ai-12-2"] },
-        { "name": "case_ref", "type": "reference", "required": true, "description": "Your reference for the case or the person concerned. Never a name.", "evidences": ["ai-86-1"] },
-        { "name": "input_digest", "type": "digest", "required": false, "description": "SHA-256 of the input exactly as the system received it.", "evidences": ["ai-12-2"] },
-        { "name": "output_digest", "type": "digest", "required": false, "description": "SHA-256 of the output exactly as the system produced it.", "evidences": ["ai-12-2"] },
-        { "name": "output_summary", "type": "text", "required": true, "description": "What the system output, in words someone can check against the output.", "evidences": ["ai-86-1"] },
-        { "name": "role_of_system", "type": "text", "required": true, "description": "The role the system's output played in the decision.", "evidences": ["ai-86-1"] },
-        { "name": "decision", "type": "text", "required": true, "description": "The decision taken, and its main elements.", "evidences": ["ai-86-1"] },
-        { "name": "human_involved", "type": "boolean", "required": true, "description": "Whether a person reviewed the output before the decision.", "evidences": ["ai-14-4-d"] },
-        { "name": "decided_at", "type": "timestamp", "required": true, "description": "When the decision was taken, UTC.", "evidences": ["ai-12-2"] }
-      ],
-      "example": {
-        "pack": "ai-act", "pack_version": 1, "kind": "ai.decision", "record_id": "dec-2026-118305",
-        "system_ref": "credit-scorer", "system_version": "4.2.1", "case_ref": "app-552091",
-        "input_digest": "a1b2c3d4e5f60718293a4b5c6d7e8f90112233445566778899aabbccddeeff00",
-        "output_digest": "ffeeddccbbaa99887766554433221100a1b2c3d4e5f60718293a4b5c6d7e8f90",
-        "output_summary": "Score 612 of 1000; band C; top factors: short credit history, high utilisation.",
-        "role_of_system": "The score set the band; an analyst confirmed the band before the offer.",
-        "decision": "Credit offered at EUR 5 000 instead of the EUR 8 000 requested, at the band C rate.",
-        "human_involved": true, "decided_at": "2026-09-26T11:42:10Z"
-      }
+     "name": "system_version",
+     "type": "string",
+     "max_length": 80,
+     "required": true,
+     "description": "The version of the system that produced the log.",
+     "evidences": [
+      "ai-12-2"
+     ]
     },
     {
-      "kind": "ai.oversight",
-      "title": "Human oversight exercised",
-      "when": "When a person overseeing the system confirms, overrides, reverses or declines to use its output, or stops it.",
-      "fields": [
-        { "name": "system_ref", "type": "reference", "required": true, "description": "Your reference for the AI system.", "evidences": ["ai-14-4-d"] },
-        { "name": "decision_record_id", "type": "reference", "required": false, "description": "The record_id of the ai.decision record concerned, if any.", "evidences": ["ai-14-4-d"] },
-        { "name": "overseer_ref", "type": "reference", "required": true, "description": "Your reference for the person who acted. Never a name.", "evidences": ["ai-14-4-d"] },
-        { "name": "action", "type": "enum", "values": ["confirmed", "overridden", "reversed", "not-used", "stopped"], "required": true, "description": "What the person did with the output.", "evidences": ["ai-14-4-d"] },
-        { "name": "reason", "type": "text", "required": true, "description": "Why.", "evidences": ["ai-14-4-d"] },
-        { "name": "acted_at", "type": "timestamp", "required": true, "description": "When, UTC.", "evidences": ["ai-14-4-d"] }
-      ],
-      "example": {
-        "pack": "ai-act", "pack_version": 1, "kind": "ai.oversight", "record_id": "ovs-2026-000932",
-        "system_ref": "credit-scorer", "decision_record_id": "dec-2026-118305", "overseer_ref": "analyst-07",
-        "action": "confirmed", "reason": "Utilisation and history checked against the bureau file; band stands.",
-        "acted_at": "2026-09-26T11:40:55Z"
-      }
+     "name": "role",
+     "type": "enum",
+     "values": [
+      "provider",
+      "deployer"
+     ],
+     "required": true,
+     "description": "Whether you keep this log as the provider or as a deployer.",
+     "evidences": [
+      "ai-19-1",
+      "ai-26-6"
+     ]
+    },
+    {
+     "name": "segment_start",
+     "type": "timestamp",
+     "required": true,
+     "description": "Time of the first event in the segment, UTC.",
+     "evidences": [
+      "ai-12-1"
+     ]
+    },
+    {
+     "name": "segment_end",
+     "type": "timestamp",
+     "required": true,
+     "description": "Time of the last event in the segment, UTC.",
+     "evidences": [
+      "ai-12-1"
+     ]
+    },
+    {
+     "name": "event_count",
+     "type": "integer",
+     "min": 0,
+     "required": true,
+     "description": "How many events the segment holds, so a shortened log is caught.",
+     "evidences": [
+      "ai-12-1"
+     ]
+    },
+    {
+     "name": "log_digest",
+     "type": "digest",
+     "required": true,
+     "description": "SHA-256 of the segment file exactly as stored.",
+     "evidences": [
+      "ai-12-1",
+      "ai-19-1",
+      "ai-26-6"
+     ]
+    },
+    {
+     "name": "log_format",
+     "type": "string",
+     "max_length": 80,
+     "required": false,
+     "description": "The format of the segment, such as jsonl.",
+     "evidences": []
+    },
+    {
+     "name": "previous_segment_record_id",
+     "type": "reference",
+     "required": false,
+     "description": "The record_id of the segment before this one, so a missing segment is caught.",
+     "evidences": [
+      "ai-12-1"
+     ]
+    },
+    {
+     "name": "retain_until",
+     "type": "date",
+     "required": false,
+     "description": "The date until which you have decided to keep this segment.",
+     "evidences": [
+      "ai-19-1",
+      "ai-26-6",
+      "ai-19-2"
+     ]
     }
-  ],
-  "retention": "Articles 19(1) and 26(6) set a minimum of six months for the logs they cover, unless other law provides otherwise; this pack does not decide your period. Whether your system is high-risk, and from when these obligations apply to it, is yours to establish from the Regulation.",
-  "notes": "The log itself never leaves you: only the digest of each segment is recorded. A segment produced later can then be shown to be the segment that existed when it was sealed, and event_count and previous_segment_record_id make a shortened or missing segment visible."
+   ],
+   "example": {
+    "pack": "ai-act",
+    "pack_version": 1,
+    "kind": "ai.log-segment",
+    "record_id": "log-credit-scorer-2026092611",
+    "system_ref": "credit-scorer",
+    "system_version": "4.2.1",
+    "role": "deployer",
+    "segment_start": "2026-09-26T11:00:00.000123Z",
+    "segment_end": "2026-09-26T11:59:59.874012Z",
+    "event_count": 1847,
+    "log_digest": "0f1e2d3c4b5a69788796a5b4c3d2e1f00112233445566778899aabbccddeeff0",
+    "log_format": "jsonl",
+    "previous_segment_record_id": "log-credit-scorer-2026092610",
+    "retain_until": "2027-09-30"
+   }
+  },
+  {
+   "kind": "ai.decision",
+   "title": "Decision taken on the system's output",
+   "when": "When a decision about a person or a case is taken on the basis of the system's output.",
+   "fields": [
+    {
+     "name": "system_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your reference for the AI system.",
+     "evidences": [
+      "ai-12-2",
+      "ai-86-1"
+     ]
+    },
+    {
+     "name": "system_version",
+     "type": "string",
+     "max_length": 80,
+     "required": true,
+     "description": "The version of the system that produced the output.",
+     "evidences": [
+      "ai-12-2"
+     ]
+    },
+    {
+     "name": "case_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your reference for the case or the person concerned. Never a name.",
+     "evidences": [
+      "ai-86-1"
+     ]
+    },
+    {
+     "name": "input_digest",
+     "type": "digest",
+     "required": false,
+     "description": "SHA-256 of the input exactly as the system received it.",
+     "evidences": [
+      "ai-12-2"
+     ]
+    },
+    {
+     "name": "output_digest",
+     "type": "digest",
+     "required": false,
+     "description": "SHA-256 of the output exactly as the system produced it.",
+     "evidences": [
+      "ai-12-2"
+     ]
+    },
+    {
+     "name": "output_summary",
+     "type": "text",
+     "required": true,
+     "description": "What the system output, in words someone can check against the output.",
+     "evidences": [
+      "ai-86-1"
+     ]
+    },
+    {
+     "name": "role_of_system",
+     "type": "text",
+     "required": true,
+     "description": "The role the system's output played in the decision.",
+     "evidences": [
+      "ai-86-1"
+     ]
+    },
+    {
+     "name": "decision",
+     "type": "text",
+     "required": true,
+     "description": "The decision taken, and its main elements.",
+     "evidences": [
+      "ai-86-1"
+     ]
+    },
+    {
+     "name": "human_involved",
+     "type": "boolean",
+     "required": true,
+     "description": "Whether a person reviewed the output before the decision.",
+     "evidences": [
+      "ai-14-4-d"
+     ]
+    },
+    {
+     "name": "decided_at",
+     "type": "timestamp",
+     "required": true,
+     "description": "When the decision was taken, UTC.",
+     "evidences": [
+      "ai-12-2"
+     ]
+    }
+   ],
+   "example": {
+    "pack": "ai-act",
+    "pack_version": 1,
+    "kind": "ai.decision",
+    "record_id": "dec-2026-118305",
+    "system_ref": "credit-scorer",
+    "system_version": "4.2.1",
+    "case_ref": "app-552091",
+    "input_digest": "a1b2c3d4e5f60718293a4b5c6d7e8f90112233445566778899aabbccddeeff00",
+    "output_digest": "ffeeddccbbaa99887766554433221100a1b2c3d4e5f60718293a4b5c6d7e8f90",
+    "output_summary": "Score 612 of 1000; band C; top factors: short credit history, high utilisation.",
+    "role_of_system": "The score set the band; an analyst confirmed the band before the offer.",
+    "decision": "Credit offered at EUR 5 000 instead of the EUR 8 000 requested, at the band C rate.",
+    "human_involved": true,
+    "decided_at": "2026-09-26T11:42:10Z"
+   }
+  },
+  {
+   "kind": "ai.oversight",
+   "title": "Human oversight exercised",
+   "when": "When a person overseeing the system confirms, overrides, reverses or declines to use its output, or stops it.",
+   "fields": [
+    {
+     "name": "system_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your reference for the AI system.",
+     "evidences": [
+      "ai-14-4-d"
+     ]
+    },
+    {
+     "name": "decision_record_id",
+     "type": "reference",
+     "required": false,
+     "description": "The record_id of the ai.decision record concerned, if any.",
+     "evidences": [
+      "ai-14-4-d"
+     ]
+    },
+    {
+     "name": "overseer_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your reference for the person who acted. Never a name.",
+     "evidences": [
+      "ai-14-4-d"
+     ]
+    },
+    {
+     "name": "action",
+     "type": "enum",
+     "values": [
+      "confirmed",
+      "overridden",
+      "reversed",
+      "not-used",
+      "stopped"
+     ],
+     "required": true,
+     "description": "What the person did with the output.",
+     "evidences": [
+      "ai-14-4-d"
+     ]
+    },
+    {
+     "name": "reason",
+     "type": "text",
+     "required": true,
+     "description": "Why.",
+     "evidences": [
+      "ai-14-4-d"
+     ]
+    },
+    {
+     "name": "acted_at",
+     "type": "timestamp",
+     "required": true,
+     "description": "When, UTC.",
+     "evidences": [
+      "ai-14-4-d"
+     ]
+    }
+   ],
+   "example": {
+    "pack": "ai-act",
+    "pack_version": 1,
+    "kind": "ai.oversight",
+    "record_id": "ovs-2026-000932",
+    "system_ref": "credit-scorer",
+    "decision_record_id": "dec-2026-118305",
+    "overseer_ref": "analyst-07",
+    "action": "confirmed",
+    "reason": "Utilisation and history checked against the bureau file; band stands.",
+    "acted_at": "2026-09-26T11:40:55Z"
+   }
+  },
+  {
+   "kind": "ai.model-provenance",
+   "title": "Model, prompt and policy in force",
+   "when": "Each time the model version, the prompt template or the policy a system applies changes: sealed by their digests, so any later decision record can name exactly what was in force.",
+   "fields": [
+    {
+     "name": "system_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your reference for the AI system.",
+     "evidences": [
+      "ai-12-1",
+      "ai-12-2"
+     ]
+    },
+    {
+     "name": "model_version_digest",
+     "type": "digest",
+     "required": true,
+     "description": "SHA-256 of the model identifier and version, or of the model weights, as you define it.",
+     "evidences": [
+      "ai-12-2",
+      "ai-86-1"
+     ]
+    },
+    {
+     "name": "prompt_template_digest",
+     "type": "digest",
+     "required": false,
+     "description": "SHA-256 of the prompt template or system instructions, exactly as deployed.",
+     "evidences": [
+      "ai-12-2",
+      "ai-86-1"
+     ]
+    },
+    {
+     "name": "policy_digest",
+     "type": "digest",
+     "required": false,
+     "description": "SHA-256 of the rules or policy the system applies, exactly as deployed.",
+     "evidences": [
+      "ai-12-2",
+      "ai-86-1"
+     ]
+    },
+    {
+     "name": "effective_from",
+     "type": "timestamp",
+     "required": true,
+     "description": "From when this combination is in force, UTC.",
+     "evidences": [
+      "ai-12-1",
+      "ai-12-2"
+     ]
+    },
+    {
+     "name": "previous_record_id",
+     "type": "reference",
+     "required": false,
+     "description": "The record_id of the provenance record this one replaces.",
+     "evidences": [
+      "ai-12-2"
+     ]
+    }
+   ],
+   "example": {
+    "pack": "ai-act",
+    "pack_version": 1,
+    "kind": "ai.model-provenance",
+    "record_id": "prov-credit-2026-10-01",
+    "system_ref": "credit-scoring",
+    "model_version_digest": "b6d8f0a2c4e6b8d0f2a4c6e8b0d2f4a6c8e0b2d4f6a8c0e2b4d6f8a0c2e4b6d8",
+    "prompt_template_digest": "f0a2c4e6b8d0f2a4c6e8b0d2f4a6c8e0b2d4f6a8c0e2b4d6f8a0c2e4b6d8f0a2",
+    "policy_digest": "4e6b8d0f2a4c6e8b0d2f4a6c8e0b2d4f6a8c0e2b4d6f8a0c2e4b6d8f0a2c4e6b",
+    "effective_from": "2026-10-01T00:00:00Z",
+    "previous_record_id": "prov-credit-2026-07-01"
+   }
+  },
+  {
+   "kind": "ai.screening-criteria",
+   "title": "Criteria fixed before people are assessed",
+   "when": "Before a round of assessment opens (applications for a job, for credit, for a place): the criteria and their weights are sealed, so they can be shown not to have been changed once the people being assessed were known.",
+   "fields": [
+    {
+     "name": "system_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your reference for the AI system or the assessment process.",
+     "evidences": [
+      "ai-86-1"
+     ]
+    },
+    {
+     "name": "round_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your reference for the round, such as a vacancy.",
+     "evidences": [
+      "ai-86-1"
+     ]
+    },
+    {
+     "name": "criteria_digest",
+     "type": "digest",
+     "required": true,
+     "description": "SHA-256 of the criteria and their weights, exactly as fixed.",
+     "evidences": [
+      "ai-86-1",
+      "ai-12-2"
+     ]
+    },
+    {
+     "name": "fixed_at",
+     "type": "timestamp",
+     "required": true,
+     "description": "When they were fixed, UTC.",
+     "evidences": [
+      "ai-86-1"
+     ]
+    },
+    {
+     "name": "opens_at",
+     "type": "timestamp",
+     "required": false,
+     "description": "When the round opens, UTC.",
+     "evidences": [
+      "ai-86-1"
+     ]
+    },
+    {
+     "name": "provenance_record_id",
+     "type": "reference",
+     "required": false,
+     "description": "The record_id of the ai.model-provenance in force.",
+     "evidences": [
+      "ai-12-2"
+     ]
+    }
+   ],
+   "example": {
+    "pack": "ai-act",
+    "pack_version": 1,
+    "kind": "ai.screening-criteria",
+    "record_id": "crit-vac-2026-219",
+    "system_ref": "cv-screening",
+    "round_ref": "vacancy-2026-219",
+    "criteria_digest": "0d2f4a6c8e0b2d4f6a8c0e2b4d6f8a0c2e4b6d8f0a2c4e6b8d0f2a4c6e8b0d2f",
+    "fixed_at": "2026-10-07T08:00:00Z",
+    "opens_at": "2026-10-08T00:00:00Z"
+   }
+  },
+  {
+   "kind": "ai.content-credential",
+   "title": "Generated content and its marking sealed",
+   "when": "When a system generates content and marks it: the digest of the content and of its marking (for example a C2PA manifest) are sealed, so the time it existed is fixed independently and two different versions of it cannot both be presented as the original.",
+   "fields": [
+    {
+     "name": "system_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your reference for the generating system.",
+     "evidences": [
+      "ai-50-2"
+     ]
+    },
+    {
+     "name": "content_digest",
+     "type": "digest",
+     "required": true,
+     "description": "SHA-256 of the generated content exactly as published.",
+     "evidences": [
+      "ai-50-2"
+     ]
+    },
+    {
+     "name": "marking",
+     "type": "enum",
+     "values": [
+      "c2pa-manifest",
+      "watermark",
+      "metadata",
+      "other"
+     ],
+     "required": true,
+     "description": "How the output is marked.",
+     "evidences": [
+      "ai-50-2"
+     ]
+    },
+    {
+     "name": "marking_digest",
+     "type": "digest",
+     "required": false,
+     "description": "SHA-256 of the marking itself, such as the C2PA manifest store, where it can be separated.",
+     "evidences": [
+      "ai-50-2"
+     ]
+    },
+    {
+     "name": "generated_at",
+     "type": "timestamp",
+     "required": true,
+     "description": "When it was generated, UTC.",
+     "evidences": [
+      "ai-50-2"
+     ]
+    }
+   ],
+   "example": {
+    "pack": "ai-act",
+    "pack_version": 1,
+    "kind": "ai.content-credential",
+    "record_id": "gen-2026-10-07-0091",
+    "system_ref": "image-studio",
+    "content_digest": "6c8e0b2d4f6a8c0e2b4d6f8a0c2e4b6d8f0a2c4e6b8d0f2a4c6e8b0d2f4a6c8e",
+    "marking": "c2pa-manifest",
+    "marking_digest": "a8c0e2b4d6f8a0c2e4b6d8f0a2c4e6b8d0f2a4c6e8b0d2f4a6c8e0b2d4f6a8c0",
+    "generated_at": "2026-10-07T10:15:03Z"
+   }
+  }
+ ],
+ "retention": "Articles 19(1) and 26(6) set a minimum of six months for the logs they cover, unless other law provides otherwise; this pack does not decide your period. Whether your system is high-risk, and from when these obligations apply to it, is yours to establish from the Regulation.",
+ "notes": "The log itself never leaves you: only the digest of each segment is recorded. A segment produced later can then be shown to be the segment that existed when it was sealed, and event_count and previous_segment_record_id make a shortened or missing segment visible."
 }

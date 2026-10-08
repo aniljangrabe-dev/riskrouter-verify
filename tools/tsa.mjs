@@ -353,12 +353,26 @@ export function verifyTimestampFile(doc, ring = null) {
 
 /* ------------------------------------------------------------------ stamp */
 
+/**
+ * What an authority may be asked to stamp. A paid authority can be limited to the
+ * evidence head alone (`"subjects": ["evidence-head"]`), so at most one token an hour
+ * is bought, whatever happens to the v1 ledger. Absent, it stamps both.
+ */
+export const SUBJECT_KINDS = ['evidence-head', 'ledger'];
+const kindOf = (name) => name.replace(/-\d+$/, '');
+
 export function loadAuthorities(dir = TSA_DIR) {
   const list = JSON.parse(fs.readFileSync(path.join(dir, 'authorities.json'), 'utf8')).authorities;
   for (const a of list) {
     if (!/^[a-z0-9-]{2,32}$/.test(a.id)) throw new Error(`authority id ${a.id} is not a short lower-case id`);
     if (a.qualified === true && !QUALIFIED_LIST.test(String(a.trusted_list || ''))) {
       throw new Error(`authority ${a.id} is marked qualified without an EU Trusted List entry`);
+    }
+    if (a.subjects !== undefined && (!Array.isArray(a.subjects) || !a.subjects.length || a.subjects.some((x) => !SUBJECT_KINDS.includes(x)))) {
+      throw new Error(`authority ${a.id}: subjects must be a non-empty list of ${SUBJECT_KINDS.join(', ')}`);
+    }
+    if (a.auth_env !== undefined && !/^[A-Z][A-Z0-9_]{2,63}$/.test(String(a.auth_env))) {
+      throw new Error(`authority ${a.id}: auth_env must name an environment variable`);
     }
   }
   return list;
@@ -392,6 +406,7 @@ export async function stamp({ fetchJson, ring, authorities, dir = TSA_DIR, now =
     const sig = verifyOurSignature(ring, s.payload, body.signature);
     if (!sig.ok) { lines.push({ warn: `${route}: ${sig.reason}; nothing timestamped` }); continue; }
     for (const a of authorities) {
+      if (a.subjects && !a.subjects.includes(kindOf(s.name))) continue;
       const file = path.join(dir, `${s.name}.${a.id}.json`);
       if (fs.existsSync(file)) {
         const held = JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -406,6 +421,8 @@ export async function stamp({ fetchJson, ring, authorities, dir = TSA_DIR, now =
         continue;
       }
       if (dryRun) { lines.push({ skipped: `${s.name}: would ask ${a.id}` }); continue; }
+      // A contracted authority is never called without its credentials: no anonymous use of a paid service.
+      if (a.auth_env && !(env ?? process.env)[a.auth_env]) { lines.push({ warn: `${s.name}: ${a.id} not asked, its credentials (${a.auth_env}) are not set` }); continue; }
       try {
         const { token, check } = await requestToken(a, s.payload, { fetchImpl, env });
         const doc = {

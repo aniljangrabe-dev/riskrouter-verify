@@ -1,0 +1,280 @@
+{
+ "format": "riskrouter-regime-pack|1",
+ "id": "aml",
+ "version": 1,
+ "title": "Anti-money laundering: customer due diligence, sanctions screening and its records",
+ "regime": "Anti-Money Laundering Regulation",
+ "summary": "What an obliged entity records so it can show which customer file it approved and when, which version of a targeted financial sanctions list a customer was screened against, and that the screening was repeated. The customer file stays with you; only its digests are sealed.",
+ "instruments": [
+  {
+   "id": "amlr",
+   "name": "Regulation (EU) 2024/1624 (Anti-Money Laundering Regulation)",
+   "celex": "32024R1624",
+   "source": "https://eur-lex.europa.eu/eli/reg/2024/1624/oj/eng"
+  }
+ ],
+ "articles": [
+  {
+   "id": "aml-20-1",
+   "instrument": "amlr",
+   "ref": "Article 20(1)",
+   "asks": "The customer due diligence measures: among them, identifying the customer and the beneficial owners and verifying their identity, and understanding the purpose and intended nature of the business relationship."
+  },
+  {
+   "id": "aml-20-1-d",
+   "instrument": "amlr",
+   "ref": "Article 20(1), point (d)",
+   "asks": "Verify whether the customer or the beneficial owners are subject to targeted financial sanctions and, for a legal entity, whether persons subject to them control it or hold more than 50 % of its proprietary rights or a majority interest in it."
+  },
+  {
+   "id": "aml-26",
+   "instrument": "amlr",
+   "ref": "Article 26",
+   "asks": "Regularly verify again whether the condition in Article 20(1), point (d), is met, as often as the exposure to the risks of non-implementation and evasion of targeted financial sanctions requires; credit and financial institutions also do so upon a new designation."
+  },
+  {
+   "id": "aml-77-1",
+   "instrument": "amlr",
+   "ref": "Article 77(1)",
+   "asks": "Retain, among other things, a copy of the documents and information obtained in performing customer due diligence, the record of the assessment of suspicious transactions, and the supporting evidence and records of transactions."
+  }
+ ],
+ "kinds": [
+  {
+   "kind": "aml.onboarding-file",
+   "title": "Customer file approved",
+   "when": "When a customer's due diligence file is approved: the digest of each document in it is sealed at that moment, so no document can be swapped in later.",
+   "fields": [
+    {
+     "name": "customer_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your reference for the customer, never a name.",
+     "evidences": [
+      "aml-20-1",
+      "aml-77-1"
+     ]
+    },
+    {
+     "name": "approved_at",
+     "type": "timestamp",
+     "required": true,
+     "description": "When the file was approved, UTC.",
+     "evidences": [
+      "aml-20-1"
+     ]
+    },
+    {
+     "name": "cdd_level",
+     "type": "enum",
+     "values": [
+      "simplified",
+      "standard",
+      "enhanced"
+     ],
+     "required": true,
+     "description": "The level of due diligence applied.",
+     "evidences": [
+      "aml-20-1"
+     ]
+    },
+    {
+     "name": "document_digests",
+     "type": "list",
+     "items": {
+      "type": "digest"
+     },
+     "required": true,
+     "description": "SHA-256 of each document and data set in the file, exactly as held.",
+     "evidences": [
+      "aml-77-1",
+      "aml-20-1"
+     ]
+    },
+    {
+     "name": "screening_record_ids",
+     "type": "list",
+     "items": {
+      "type": "reference"
+     },
+     "required": false,
+     "description": "The record_ids of the sanctions screenings done for this file.",
+     "evidences": [
+      "aml-20-1-d"
+     ]
+    },
+    {
+     "name": "approver_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your reference for the person who approved the file.",
+     "evidences": [
+      "aml-20-1"
+     ]
+    }
+   ],
+   "example": {
+    "pack": "aml",
+    "pack_version": 1,
+    "kind": "aml.onboarding-file",
+    "record_id": "onb-2027-1182",
+    "customer_ref": "cust-1182",
+    "approved_at": "2027-07-12T15:04:00Z",
+    "cdd_level": "standard",
+    "document_digests": [
+     "2b4d6f8a0c2e4b6d8f0a2c4e6b8d0f2a4c6e8b0d2f4a6c8e0b2d4f6a8c0e2b4d",
+     "9f8e7d6c5b4a39281706f5e4d3c2b1a09f8e7d6c5b4a39281706f5e4d3c2b1a0"
+    ],
+    "screening_record_ids": [
+     "scr-2027-1182-01"
+    ],
+    "approver_ref": "kyc-analyst-7"
+   }
+  },
+  {
+   "kind": "aml.list-version",
+   "title": "Sanctions list version held",
+   "when": "Each time you take in a new version of a targeted financial sanctions list: its digest and publication date are sealed, so a screening can later be tied to the list as it stood.",
+   "fields": [
+    {
+     "name": "list_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your reference for the list, such as eu-consolidated or un-sc.",
+     "evidences": [
+      "aml-20-1-d",
+      "aml-26"
+     ]
+    },
+    {
+     "name": "published_at",
+     "type": "timestamp",
+     "required": true,
+     "description": "When the list version was published by its source, UTC.",
+     "evidences": [
+      "aml-26"
+     ]
+    },
+    {
+     "name": "retrieved_at",
+     "type": "timestamp",
+     "required": true,
+     "description": "When you retrieved it, UTC.",
+     "evidences": [
+      "aml-26"
+     ]
+    },
+    {
+     "name": "list_digest",
+     "type": "digest",
+     "required": true,
+     "description": "SHA-256 of the list file exactly as retrieved.",
+     "evidences": [
+      "aml-20-1-d",
+      "aml-26"
+     ]
+    }
+   ],
+   "example": {
+    "pack": "aml",
+    "pack_version": 1,
+    "kind": "aml.list-version",
+    "record_id": "list-eu-2027-07-12",
+    "list_ref": "eu-consolidated",
+    "published_at": "2027-07-12T06:00:00Z",
+    "retrieved_at": "2027-07-12T06:15:00Z",
+    "list_digest": "4c6e8b0d2f4a6c8e0b2d4f6a8c0e2b4d6f8a0c2e4b6d8f0a2c4e6b8d0f2a4c6e"
+   }
+  },
+  {
+   "kind": "aml.screening",
+   "title": "Customer screened against a sanctions list",
+   "when": "At onboarding, at each periodic re-check, and upon a new designation.",
+   "fields": [
+    {
+     "name": "customer_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your reference for the customer, never a name.",
+     "evidences": [
+      "aml-20-1-d",
+      "aml-26"
+     ]
+    },
+    {
+     "name": "list_record_id",
+     "type": "reference",
+     "required": true,
+     "description": "The record_id of the aml.list-version screened against.",
+     "evidences": [
+      "aml-20-1-d",
+      "aml-26"
+     ]
+    },
+    {
+     "name": "trigger",
+     "type": "enum",
+     "values": [
+      "onboarding",
+      "periodic",
+      "new-designation",
+      "change-of-customer-data"
+     ],
+     "required": true,
+     "description": "Why the screening was done.",
+     "evidences": [
+      "aml-20-1-d",
+      "aml-26"
+     ]
+    },
+    {
+     "name": "screened_at",
+     "type": "timestamp",
+     "required": true,
+     "description": "When, UTC.",
+     "evidences": [
+      "aml-20-1-d",
+      "aml-26"
+     ]
+    },
+    {
+     "name": "result",
+     "type": "enum",
+     "values": [
+      "no-match",
+      "potential-match-cleared",
+      "potential-match-open",
+      "confirmed-match"
+     ],
+     "required": true,
+     "description": "The outcome.",
+     "evidences": [
+      "aml-20-1-d"
+     ]
+    },
+    {
+     "name": "reviewer_ref",
+     "type": "reference",
+     "required": false,
+     "description": "Your reference for the person who cleared or confirmed a potential match.",
+     "evidences": [
+      "aml-20-1-d"
+     ]
+    }
+   ],
+   "example": {
+    "pack": "aml",
+    "pack_version": 1,
+    "kind": "aml.screening",
+    "record_id": "scr-2027-1182-01",
+    "customer_ref": "cust-1182",
+    "list_record_id": "list-eu-2027-07-12",
+    "trigger": "onboarding",
+    "screened_at": "2027-07-12T14:58:00Z",
+    "result": "no-match"
+   }
+  }
+ ],
+ "retention": "Article 77 states five years from the end of the business relationship, or from the date of an occasional transaction, and says when that period may be extended. The regulation applies from 10 July 2027. This pack does not decide your period.",
+ "notes": "The customer file, the list and the screening detail stay with you; only their digests are sealed. A sealed screening shows which list version was checked and when, not that the check was right."
+}

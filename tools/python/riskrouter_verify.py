@@ -22,6 +22,11 @@ FILE may be any of:
     a v2 consistency proof          riskrouter-evidence-consistency|v2  (needs --saved-head)
     a v2 witness cosignature        riskrouter-evidence-cosignature|v2   (needs --witness-key)
     a record bundle                 riskrouter-record-bundle|1           (a record, its salt, and its evidence proof)
+    a selective disclosure          riskrouter-disclosure-bundle|1       (some fields of a sealed record, the rest still sealed)
+    a chain statement               riskrouter-evidence-chain|v1         (what the log holds in one completeness chain)
+    a completeness bundle           riskrouter-completeness-bundle|1     (every record of a chain: none left out)
+    a spot-check bundle             riskrouter-spot-check-bundle|1       (the records a Bitcoin block hash selected)
+    a co-sealed record              riskrouter-coseal|1                  (the same record, signed by two parties)
     an RFC 3161 head timestamp      riskrouter-head-timestamp|1          (--key checks our signature on the head too)
     a list of v1 ledger rows
     a C2SP checkpoint (signed note)  c2sp.org/tlog-checkpoint           (needs --vkey; --witness-vkey, repeatable)
@@ -31,6 +36,7 @@ Exit status: 0 verified, 1 not verified, 2 usage.
 """
 import base64
 import hashlib
+import hmac
 import json
 import os
 import re
@@ -508,6 +514,296 @@ def verify_record_bundle(doc, published=None):
     if published is not None and proof.get("head"):
         sig = verify_head_signature(proof["head"], proof.get("signature"), published)
         lines.append((sig["ok"], "we signed that head" if sig["ok"] else sig["reason"]))
+    return lines
+
+
+# -------------------------------- completeness chains, spot checks, disclosure, co-sealing
+# docs/completeness.md, docs/spot-checks.md, docs/selective-disclosure.md and
+# docs/co-sealing.md, settled 7 October 2026. Reimplemented here from the
+# specification, not shared with the JavaScript; the tests hold them equal.
+
+CHAIN_GENESIS = "0" * 64
+_TIME6 = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z\Z")
+
+
+def _whole_number(v):
+    return isinstance(v, int) and not isinstance(v, bool)
+
+
+def chain_links_digest(links):
+    """SHA-256 over the link lines chain_seq|leaf_index|created_at|record_digest, each ending in a newline."""
+    text = "".join("%d|%d|%s|%s\n" % (l["chain_seq"], l["leaf_index"], l["created_at"], l["record_digest"]) for l in links)
+    return sha256_hex(text.encode("utf-8"))
+
+
+def chain_payload(st):
+    """Frozen: what the log signs about a chain, as of a signed head."""
+    h = st["head"]
+    return "|".join(["riskrouter-evidence-chain", "v1", st["chain_tag"], str(st["length"]), str(h["tree_size"]),
+                     h["root_hash"], h["timestamp"], str(st["from"]), str(st["to"]), st["links_digest"]])
+
+
+def select_sample(seed, population, sample):
+    """The positions (from 1) a seed selects, in draw order. Frozen; see docs/spot-checks.md."""
+    if not isinstance(seed, str) or not HEX64.match(seed):
+        raise ValueError("the seed is a block hash: 64 lowercase hex characters")
+    if not _whole_number(population) or population < 1 or not _whole_number(sample) or sample < 1:
+        raise ValueError("the population and the sample are whole numbers of at least 1")
+    limit = (1 << 64) - ((1 << 64) % population)
+    want = min(sample, population)
+    drawn, counter = [], 0
+    while len(drawn) < want:
+        h = hashlib.sha256(("riskrouter-spot-check|v1|%s|%d|%d" % (seed, population, counter)).encode("utf-8")).digest()
+        counter += 1
+        x = int.from_bytes(h[:8], "big")
+        if x >= limit:
+            continue
+        position = x % population + 1
+        if position not in drawn:
+            drawn.append(position)
+    return drawn
+
+
+def _signed_line(payload, signature, published, what):
+    if published is None:
+        return (None, "%s: no key supplied (--key), signature not checked" % what)
+    if not signature:
+        return (False, "%s: carries no signature" % what)
+    if signature.get("signed_payload") and signature["signed_payload"] != payload:
+        return (False, "%s: the signature covers different content than the file claims" % what)
+    key = pick_key(published, signature.get("key_id"))
+    if key is None:
+        return (False, "%s: signed with key %s, which is not among the keys supplied" % (what, signature.get("key_id") or "(unnamed)"))
+    if not ecdsa_p256_verify(key["public_key"], payload.encode("utf-8"), signature.get("signature", "")):
+        return (False, "%s: the signature does not verify against the key supplied" % what)
+    return (True, "%s: we signed it" % what)
+
+
+def verify_chain_statement(doc, published=None):
+    """One chain statement: contiguous, well-formed links that produce links_digest, signed by us. Returns (lines, links)."""
+    lines, links = [], {}
+    try:
+        if doc.get("format") != "riskrouter-evidence-chain|v1":
+            return [(False, "chain: not a riskrouter-evidence-chain|v1 statement")], None
+        tag, length, first, last = doc["chain_tag"], doc["length"], doc["from"], doc["to"]
+        head = doc["head"]
+        size = int(head["tree_size"])
+        if not HEX64.match(str(tag)) or not HEX64.match(str(head["root_hash"])):
+            return [(False, "chain: the tag or the head is malformed")], None
+        if not all(_whole_number(v) for v in (length, first, last)) or length < 0 or first < 1 or last < first - 1 or last > length:
+            return [(False, "chain: length, from and to are not a range within the chain")], None
+        listed = doc.get("links") or []
+        if len(listed) != last - first + 1:
+            return [(False, "chain: lists %d links for positions %d to %d" % (len(listed), first, last))], None
+        previous_leaf = -1
+        for i, l in enumerate(listed):
+            if l.get("chain_seq") != first + i:
+                return [(False, "chain: the links are not contiguous at position %d" % (first + i))], None
+            if not _whole_number(l.get("leaf_index")) or not 0 <= l["leaf_index"] < size or l["leaf_index"] <= previous_leaf:
+                return [(False, "chain: position %d names a leaf outside the head's tree, or out of order" % l["chain_seq"])], None
+            if not _TIME6.match(str(l.get("created_at"))) or not HEX64.match(str(l.get("record_digest"))):
+                return [(False, "chain: position %d is not a well-formed link" % l["chain_seq"])], None
+            previous_leaf = l["leaf_index"]
+            links[l["chain_seq"]] = l
+        if chain_links_digest(listed) != doc.get("links_digest"):
+            return [(False, "chain: the links do not produce links_digest: the list was changed")], None
+    except (KeyError, TypeError, ValueError, AttributeError):
+        return [(False, "chain: not a complete statement")], None
+    lines.append((True, "chain %s... has %d records as of tree size %d; positions %d to %d listed and intact" % (tag[:12], length, size, first, last)))
+    if doc.get("chain_signature"):
+        lines.append(_signed_line(chain_payload(doc), doc["chain_signature"], published, "chain statement"))
+    else:
+        lines.append((False, "chain statement: unsigned"))
+    if doc.get("signature"):
+        lines.append(_signed_line(head_payload(head), doc["signature"], published, "evidence head"))
+    return lines, links
+
+
+def _read_statements(pages, published):
+    pages = pages if isinstance(pages, list) else ([pages] if pages else [])
+    if not pages:
+        return [(False, "carries no chain statement")], None
+    lines, links = [], {}
+    first = pages[0]
+    for d in pages:
+        l, got = verify_chain_statement(d, published)
+        lines.extend(l)
+        if got is None:
+            return lines, None
+        if (d.get("chain_tag"), d.get("length"), d["head"].get("tree_size"), d["head"].get("root_hash")) != \
+           (first.get("chain_tag"), first.get("length"), first["head"].get("tree_size"), first["head"].get("root_hash")):
+            lines.append((False, "chain: the pages are not one statement (another tag, head or length)"))
+            return lines, None
+        links.update(got)
+    if any(ok is False for ok, _ in lines):
+        return lines, None
+    return lines, {"links": links, "tag": first["chain_tag"], "length": first["length"], "head": first["head"]}
+
+
+def _records_by_digest(records, lines):
+    found = {}
+    for i, r in enumerate(records if isinstance(records, list) else []):
+        try:
+            found[record_digest(r.get("salt_hex"), r.get("record"))] = r.get("record")
+        except (ValueError, AttributeError) as e:
+            lines.append((False, "record %d: %s" % (i, e)))
+    return found
+
+
+def _check_position(seq, link, tag, found, previous):
+    record = found.get(link["record_digest"])
+    if record is None:
+        return (False, "position %d: NOT shown. The log holds a record here (leaf %d, sealed %s)" % (seq, link["leaf_index"], link["created_at"]))
+    if record.get("chain_tag") != tag or record.get("chain_seq") != seq:
+        return (False, "position %d: the record shown says it is elsewhere in the chain, or in another chain" % seq)
+    if previous is not None and record.get("chain_prev") != previous:
+        return (False, "position %d: chain_prev is not the digest of position %d" % (seq, seq - 1))
+    return (True, "position %d: shown, and it is the record sealed (leaf %d)" % (seq, link["leaf_index"]))
+
+
+def check_completeness(doc, published=None):
+    lines, s = _read_statements(doc.get("chain"), published)
+    if s is None:
+        return lines
+    last = s["length"]
+    as_of = doc.get("as_of")
+    if as_of is not None:
+        if not _TIME6.match(str(as_of)):
+            return lines + [(False, "as_of is not a time in the form 2026-10-07T12:00:00.000000Z")]
+        last = max([seq for seq, l in s["links"].items() if l["created_at"] <= as_of] or [0])
+    for seq in range(1, last + 1):
+        if seq not in s["links"]:
+            return lines + [(False, "chain: position %d is not in the statements supplied" % seq)]
+    found = _records_by_digest(doc.get("records"), lines)
+    previous, gaps = CHAIN_GENESIS, 0
+    for seq in range(1, last + 1):
+        link = s["links"][seq]
+        line = _check_position(seq, link, s["tag"], found, previous)
+        gaps += 0 if line[0] else 1
+        lines.append(line)
+        previous = link["record_digest"]
+    lines.append((True, "complete: all %d records of the chain are shown, in order, none missing" % last) if gaps == 0
+                 else (False, "NOT complete: %d of %d positions not shown or not the record sealed" % (gaps, last)))
+    return lines
+
+
+def check_spot_check(doc, published=None):
+    lines, s = _read_statements(doc.get("chain"), published)
+    if s is None:
+        return lines
+    try:
+        selected = select_sample(doc.get("seed"), s["length"], doc.get("sample_size"))
+    except ValueError as e:
+        return lines + [(False, "spot check: %s" % e)]
+    lines.append((True, "spot check: the seed selects %d of %d positions: %s" % (len(selected), s["length"], ", ".join(str(p) for p in sorted(selected)))))
+    lines.append((None, "spot check: confirm yourself that block %s has hash %s, and that its height was announced before it was mined"
+                  % (doc.get("bitcoin_height", "(height not given)"), doc.get("seed"))))
+    found = _records_by_digest(doc.get("records"), lines)
+    missing = 0
+    for seq in selected:
+        link = s["links"].get(seq)
+        if link is None:
+            lines.append((False, "position %d: not in the statements supplied" % seq))
+            missing += 1
+            continue
+        before = s["links"].get(seq - 1)
+        previous = CHAIN_GENESIS if seq == 1 else (before["record_digest"] if before else None)
+        line = _check_position(seq, link, s["tag"], found, previous)
+        missing += 0 if line[0] else 1
+        lines.append(line)
+    lines.append((True, "spot check passed: all %d selected records are shown and are the records sealed" % len(selected)) if missing == 0
+                 else (False, "spot check FAILED: %d of %d selected records not shown or not the record sealed" % (missing, len(selected))))
+    return lines
+
+
+def field_salt(secret_hex, name):
+    """HMAC-SHA256(secret, "riskrouter-disclosable|1|" || name): one salt per field, from a secret that never leaves the firm."""
+    if not isinstance(secret_hex, str) or not _SALT.match(secret_hex):
+        raise ValueError("the disclosure secret is 16 to 64 bytes written as lowercase hex")
+    if not _RECORD_KEY.match(name):
+        raise ValueError("field %r is not a record key" % name)
+    return hmac.new(bytes.fromhex(secret_hex), ("riskrouter-disclosable|1|" + name).encode("utf-8"), hashlib.sha256).hexdigest()
+
+
+def field_commitment(field_salt_hex, name, value):
+    if not isinstance(field_salt_hex, str) or not HEX64.match(field_salt_hex):
+        raise ValueError("a field salt is 32 bytes of lowercase hex")
+    return sha256_hex(bytes.fromhex(field_salt_hex) + canonical_record({name: value}).encode("utf-8"))
+
+
+def sealed_record(record, secret_hex):
+    canonical_record(record)
+    sealed = {"format": "riskrouter-disclosable|1",
+              "fields": {k: field_commitment(field_salt(secret_hex, k), k, record[k]) for k in sorted(record)}}
+    if isinstance(record.get("kind"), str):
+        sealed["kind"] = record["kind"]
+    return sealed
+
+
+def verify_disclosure(doc, published=None):
+    """A selective disclosure: the sealed record and its proof, and each field shown against its commitment."""
+    sealed = doc.get("record")
+    ok_shape = (isinstance(sealed, dict) and sealed.get("format") == "riskrouter-disclosable|1"
+                and isinstance(sealed.get("fields"), dict) and set(sealed) <= {"format", "kind", "fields"}
+                and all(_RECORD_KEY.match(k) and isinstance(c, str) and HEX64.match(c) for k, c in sealed["fields"].items()))
+    if not ok_shape:
+        return [(False, "disclosure: the sealed record is not a riskrouter-disclosable|1 commitment record")]
+    lines = verify_record_bundle(doc, published)
+    shown = doc.get("disclosed") if isinstance(doc.get("disclosed"), dict) else {}
+    if not shown:
+        lines.append((False, "disclosure: discloses no field"))
+    for name, d in shown.items():
+        try:
+            c = field_commitment((d or {}).get("field_salt_hex"), name, (d or {}).get("value"))
+        except ValueError as e:
+            lines.append((False, "disclosure: %s: %s" % (name, e)))
+            continue
+        if name not in sealed["fields"]:
+            lines.append((False, "disclosure: %s is not a field of the sealed record" % name))
+        elif c == sealed["fields"][name]:
+            lines.append((True, "disclosure: %s = %s is the value sealed" % (name, json.dumps(d["value"], ensure_ascii=False)[:80])))
+        else:
+            lines.append((False, "disclosure: %s: the value and its salt do NOT produce the sealed commitment" % name))
+    hidden = sorted(set(sealed["fields"]) - set(shown))
+    if hidden:
+        lines.append((True, "disclosure: %d other fields stay sealed (%s)" % (len(hidden), ", ".join(hidden))))
+    return lines
+
+
+def verify_coseal(doc, published=None):
+    """Two or more parties sealed the same digest, each as a signed entry under its own key and its own account."""
+    bundles = doc.get("bundles") if isinstance(doc.get("bundles"), list) else []
+    if len(bundles) < 2:
+        return [(False, "co-seal: needs the bundles of at least two parties")]
+    lines, entries = [], []
+    for i, b in enumerate(bundles):
+        check = verify_disclosure if (b or {}).get("format") == "riskrouter-disclosure-bundle|1" else verify_record_bundle
+        for ok, line in check(b or {}, published):
+            lines.append((ok, "party %d: %s" % (i + 1, line)))
+        proof = (b or {}).get("proof") or {}
+        entries.append((proof.get("entry") or {}, proof.get("signer_public_key")))
+    digests = {e.get("record_digest") for e, _ in entries}
+    lines.append((len(digests) == 1, "co-seal: every party sealed the same record digest" if len(digests) == 1
+                   else "co-seal: the parties sealed different digests; this is not one record"))
+    unsigned = sum(1 for e, _ in entries if int(e.get("leaf_version") or 2) != 3)
+    if unsigned:
+        lines.append((False, "co-seal: %d entries are not signed by their party (a v3 leaf is needed)" % unsigned))
+    else:
+        signers = {e.get("signer_key_id") for e, _ in entries}
+        owners = {e.get("distributor_id") for e, _ in entries}
+        lines.append((len(signers) == len(entries), "co-seal: %d different signers" % len(signers) if len(signers) == len(entries)
+                      else "co-seal: one key signed more than one of the entries; that is not two parties"))
+        lines.append((len(owners) == len(entries), "co-seal: recorded by %d different distributors" % len(owners) if len(owners) == len(entries)
+                      else "co-seal: the entries were recorded by the same distributor; that is not two parties"))
+    pinned = doc.get("expected_signers")
+    if isinstance(pinned, list):
+        for i, want in enumerate(pinned):
+            got = entries[i][1] if i < len(entries) else None
+            same = bool(got and want and got.get("x") == want.get("x") and got.get("y") == want.get("y") and got.get("crv") == want.get("crv"))
+            lines.append((same, "co-seal: party %d signed with the key you pinned for it" % (i + 1) if same
+                          else "co-seal: party %d did NOT sign with the key you pinned for it" % (i + 1)))
+    else:
+        lines.append((None, "co-seal: no expected_signers pinned; check each party's key against one it published itself"))
     return lines
 
 
@@ -1393,6 +1689,18 @@ def main(argv):
     elif fmt == "riskrouter-record-bundle|1":
         for ok, line in verify_record_bundle(doc, published):
             report(ok, line)
+    elif fmt in ("riskrouter-disclosure-bundle|1", "riskrouter-evidence-chain|v1", "riskrouter-completeness-bundle|1",
+                 "riskrouter-spot-check-bundle|1", "riskrouter-coseal|1"):
+        check = {"riskrouter-disclosure-bundle|1": verify_disclosure,
+                 "riskrouter-evidence-chain|v1": lambda d, p: verify_chain_statement(d, p)[0],
+                 "riskrouter-completeness-bundle|1": check_completeness,
+                 "riskrouter-spot-check-bundle|1": check_spot_check,
+                 "riskrouter-coseal|1": verify_coseal}[fmt]
+        for ok, line in check(doc, published):
+            if ok is None:
+                print("NOTE  " + line)
+            else:
+                report(ok, line)
     elif isinstance(doc, dict) and doc.get("attestation") and doc.get("signature"):
         if published is None:
             print("an attestation is checked against a published key: pass --key", file=sys.stderr)

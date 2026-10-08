@@ -214,6 +214,38 @@ export function headPayload({ tree_size, root_hash, timestamp }) {
   return ['riskrouter-evidence-head', 'v2', String(tree_size), root_hash, timestamp].join('|');
 }
 
+/* ------------------------------------------------- completeness chains */
+
+/**
+ * docs/completeness.md, settled 7 October 2026 with the repository owner's
+ * decision. A firm puts records in numbered chains: each record carries
+ * chain_tag, chain_seq and chain_prev (the previous record's digest) inside
+ * itself, and sends chain_tag and chain_seq beside its digest. The log
+ * refuses a number out of turn or a tag another distributor owns, and signs a
+ * statement of the chain as of a signed head, so a record left out is a gap.
+ *
+ *   link line      chain_seq|leaf_index|created_at|record_digest\n
+ *   links_digest   SHA-256(UTF-8(the link lines from `from` to `to`, concatenated))
+ *   chain payload  riskrouter-evidence-chain|v1|chain_tag|length|tree_size|root_hash|timestamp|from|to|links_digest
+ *
+ * Frozen, like the head payload: changing them invalidates every statement saved.
+ */
+export const CHAIN_FORMAT = 'riskrouter-evidence-chain|v1';
+export const CHAIN_GENESIS = '0'.repeat(64);
+
+export function chainLine({ chain_seq, leaf_index, created_at, record_digest }) {
+  return `${chain_seq}|${leaf_index}|${created_at}|${record_digest}\n`;
+}
+
+export async function linksDigest(links) {
+  return sha256(new TextEncoder().encode(links.map(chainLine).join('')));
+}
+
+export function chainPayload({ chain_tag, length, head, from, to, links_digest }) {
+  return ['riskrouter-evidence-chain', 'v1', chain_tag, String(length), String(head.tree_size), head.root_hash, head.timestamp,
+    String(from), String(to), links_digest].join('|');
+}
+
 /* ------------------------------------------- the tree from stored nodes */
 
 /**

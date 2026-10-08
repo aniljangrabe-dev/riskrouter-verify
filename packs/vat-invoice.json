@@ -1,0 +1,190 @@
+{
+ "format": "riskrouter-regime-pack|1",
+ "id": "vat-invoice",
+ "version": 1,
+ "title": "Invoices: authenticity of origin and integrity of content from issue to the end of storage",
+ "regime": "VAT Directive invoices",
+ "summary": "What a business records so it can show that an invoice it issued or received has not been altered since the day it was issued, without sending the invoice anywhere. One business control among those the directive leaves to the taxable person.",
+ "instruments": [
+  {
+   "id": "vat",
+   "name": "Council Directive 2006/112/EC (VAT Directive)",
+   "celex": "32006L0112",
+   "source": "https://eur-lex.europa.eu/eli/dir/2006/112/oj/eng"
+  }
+ ],
+ "articles": [
+  {
+   "id": "vat-233-1",
+   "instrument": "vat",
+   "ref": "Article 233(1)",
+   "asks": "The authenticity of the origin, the integrity of the content and the legibility of an invoice, on paper or electronic, are ensured from the point in time of issue until the end of the period for storage; each taxable person determines how, for example by business controls that create a reliable audit trail between an invoice and a supply."
+  },
+  {
+   "id": "vat-244",
+   "instrument": "vat",
+   "ref": "Article 244",
+   "asks": "Every taxable person ensures that copies of the invoices issued by it, by its customer or by a third party on its behalf, and all the invoices it has received, are stored."
+  }
+ ],
+ "kinds": [
+  {
+   "kind": "invoice.issued",
+   "title": "Invoice issued",
+   "when": "When the invoice is issued, before it is sent: the file exactly as issued is sealed by its digest.",
+   "fields": [
+    {
+     "name": "invoice_ref",
+     "type": "reference",
+     "required": true,
+     "description": "The invoice number.",
+     "evidences": [
+      "vat-233-1",
+      "vat-244"
+     ]
+    },
+    {
+     "name": "issued_on",
+     "type": "date",
+     "required": true,
+     "description": "The date of issue on the invoice.",
+     "evidences": [
+      "vat-233-1"
+     ]
+    },
+    {
+     "name": "invoice_digest",
+     "type": "digest",
+     "required": true,
+     "description": "SHA-256 of the invoice file exactly as issued (the XML of an e-invoice, or the PDF).",
+     "evidences": [
+      "vat-233-1",
+      "vat-244"
+     ]
+    },
+    {
+     "name": "invoice_format",
+     "type": "enum",
+     "values": [
+      "peppol-bis-billing-3",
+      "en16931-ubl",
+      "en16931-cii",
+      "pdf",
+      "paper-scan",
+      "other"
+     ],
+     "required": true,
+     "description": "The form of the invoice.",
+     "evidences": [
+      "vat-233-1"
+     ]
+    },
+    {
+     "name": "customer_ref",
+     "type": "reference",
+     "required": false,
+     "description": "Your reference for the customer.",
+     "evidences": [
+      "vat-244"
+     ]
+    },
+    {
+     "name": "supply_ref",
+     "type": "reference",
+     "required": false,
+     "description": "Your reference for the supply invoiced (an order or a delivery), the link in the audit trail.",
+     "evidences": [
+      "vat-233-1"
+     ]
+    }
+   ],
+   "example": {
+    "pack": "vat-invoice",
+    "pack_version": 1,
+    "kind": "invoice.issued",
+    "record_id": "inv-2026-004411",
+    "invoice_ref": "INV-2026-004411",
+    "issued_on": "2026-10-07",
+    "invoice_digest": "e4b6d8f0a2c4e6b8d0f2a4c6e8b0d2f4a6c8e0b2d4f6a8c0e2b4d6f8a0c2e4b6",
+    "invoice_format": "peppol-bis-billing-3",
+    "customer_ref": "cust-2290",
+    "supply_ref": "order-88123"
+   }
+  },
+  {
+   "kind": "invoice.received",
+   "title": "Invoice received",
+   "when": "When an invoice is received, before it is processed.",
+   "fields": [
+    {
+     "name": "invoice_ref",
+     "type": "reference",
+     "required": true,
+     "description": "The supplier's invoice number.",
+     "evidences": [
+      "vat-244"
+     ]
+    },
+    {
+     "name": "supplier_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your reference for the supplier.",
+     "evidences": [
+      "vat-244",
+      "vat-233-1"
+     ]
+    },
+    {
+     "name": "received_at",
+     "type": "timestamp",
+     "required": true,
+     "description": "When it was received, UTC.",
+     "evidences": [
+      "vat-244"
+     ]
+    },
+    {
+     "name": "invoice_digest",
+     "type": "digest",
+     "required": true,
+     "description": "SHA-256 of the invoice file exactly as received.",
+     "evidences": [
+      "vat-233-1",
+      "vat-244"
+     ]
+    },
+    {
+     "name": "invoice_format",
+     "type": "enum",
+     "values": [
+      "peppol-bis-billing-3",
+      "en16931-ubl",
+      "en16931-cii",
+      "pdf",
+      "paper-scan",
+      "other"
+     ],
+     "required": true,
+     "description": "The form of the invoice.",
+     "evidences": [
+      "vat-233-1"
+     ]
+    }
+   ],
+   "example": {
+    "pack": "vat-invoice",
+    "pack_version": 1,
+    "kind": "invoice.received",
+    "record_id": "rcv-2026-118",
+    "invoice_ref": "F-77/2026",
+    "supplier_ref": "supp-104",
+    "received_at": "2026-10-07T07:44:10Z",
+    "invoice_digest": "0f2a4c6e8b0d2f4a6c8e0b2d4f6a8c0e2b4d6f8a0c2e4b6d8f0a2c4e6b8d0f2a",
+    "invoice_format": "en16931-ubl"
+   }
+  }
+ ],
+ "retention": "Article 247(1) leaves the storage period to each Member State. This pack does not decide it for you; check the period where the supply takes place.",
+ "notes": "The invoice never leaves you: only its digest is sealed. A seal shows the invoice has not changed since it was sealed; it does not show the invoice is correct or that VAT is due. Directive (EU) 2025/516 (ViDA) amends the invoicing rules from dates it sets; check the consolidated text."
+}

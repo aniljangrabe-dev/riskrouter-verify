@@ -1,0 +1,250 @@
+{
+ "format": "riskrouter-regime-pack|1",
+ "id": "gdpr-accountability",
+ "version": 1,
+ "title": "GDPR accountability: consent given and withdrawn, and erasure carried out",
+ "regime": "GDPR consent and erasure",
+ "summary": "What a controller records so it can show that a person consented, to which notice and for which purpose, that a withdrawal was honoured, and that a record it had to erase was erased on time. The records hold no personal data beyond your own references, and the personal data they refer to stays erasable in your systems.",
+ "instruments": [
+  {
+   "id": "gdpr",
+   "name": "Regulation (EU) 2016/679 (General Data Protection Regulation)",
+   "celex": "32016R0679",
+   "source": "https://eur-lex.europa.eu/eli/reg/2016/679/oj/eng"
+  }
+ ],
+ "articles": [
+  {
+   "id": "gdpr-5-2",
+   "instrument": "gdpr",
+   "ref": "Article 5(2)",
+   "asks": "The controller is responsible for, and must be able to demonstrate, compliance with the principles in Article 5(1)."
+  },
+  {
+   "id": "gdpr-7-1",
+   "instrument": "gdpr",
+   "ref": "Article 7(1)",
+   "asks": "Where processing is based on consent, the controller must be able to demonstrate that the person consented to the processing of their personal data."
+  },
+  {
+   "id": "gdpr-7-3",
+   "instrument": "gdpr",
+   "ref": "Article 7(3)",
+   "asks": "The person may withdraw consent at any time, withdrawing must be as easy as giving consent, and the person is informed of this before giving it."
+  },
+  {
+   "id": "gdpr-17-1",
+   "instrument": "gdpr",
+   "ref": "Article 17(1)",
+   "asks": "The person has the right to obtain the erasure of personal data concerning them without undue delay, and the controller must erase it without undue delay, where one of the grounds the article lists applies."
+  }
+ ],
+ "kinds": [
+  {
+   "kind": "gdpr.consent",
+   "title": "Consent given or withdrawn",
+   "when": "Each time a person gives consent, and each time they withdraw it: one record per event, the notice they saw sealed by its digest.",
+   "fields": [
+    {
+     "name": "subject_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your own reference for the person, never their name or email.",
+     "evidences": [
+      "gdpr-5-2",
+      "gdpr-7-1"
+     ]
+    },
+    {
+     "name": "event",
+     "type": "enum",
+     "values": [
+      "given",
+      "withdrawn"
+     ],
+     "required": true,
+     "description": "Whether consent was given or withdrawn.",
+     "evidences": [
+      "gdpr-7-1",
+      "gdpr-7-3"
+     ]
+    },
+    {
+     "name": "purposes",
+     "type": "list",
+     "items": {
+      "type": "string"
+     },
+     "required": true,
+     "description": "The purposes consented to, as your own short codes.",
+     "evidences": [
+      "gdpr-7-1"
+     ]
+    },
+    {
+     "name": "notice_digest",
+     "type": "digest",
+     "required": true,
+     "description": "SHA-256 of the notice exactly as the person saw it, so the wording they agreed to can be shown later.",
+     "evidences": [
+      "gdpr-7-1",
+      "gdpr-5-2"
+     ]
+    },
+    {
+     "name": "notice_version",
+     "type": "string",
+     "max_length": 80,
+     "required": false,
+     "description": "Your version label for that notice.",
+     "evidences": [
+      "gdpr-7-1"
+     ]
+    },
+    {
+     "name": "channel",
+     "type": "enum",
+     "values": [
+      "web",
+      "app",
+      "email",
+      "paper",
+      "phone",
+      "in-person",
+      "other"
+     ],
+     "required": true,
+     "description": "Where the consent was given or withdrawn.",
+     "evidences": [
+      "gdpr-7-1",
+      "gdpr-7-3"
+     ]
+    },
+    {
+     "name": "at",
+     "type": "timestamp",
+     "required": true,
+     "description": "When, UTC.",
+     "evidences": [
+      "gdpr-7-1",
+      "gdpr-7-3"
+     ]
+    }
+   ],
+   "example": {
+    "pack": "gdpr-accountability",
+    "pack_version": 1,
+    "kind": "gdpr.consent",
+    "record_id": "consent-2026-118204",
+    "subject_ref": "cust-77031",
+    "event": "given",
+    "purposes": [
+     "newsletter",
+     "product-research"
+    ],
+    "notice_digest": "3f1a9c2e7b5d40a8c6e2f1d0b9a8c7e6f5d4c3b2a1908f7e6d5c4b3a29180716",
+    "notice_version": "privacy-notice-2026-09",
+    "channel": "web",
+    "at": "2026-10-07T09:12:44Z"
+   }
+  },
+  {
+   "kind": "gdpr.erasure",
+   "title": "Erasure carried out",
+   "when": "When personal data is erased on request or because its period has run out. The record that was erased can be referred to by its record_digest: the digest stays, the data goes.",
+   "fields": [
+    {
+     "name": "subject_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your own reference for the person, never their name or email.",
+     "evidences": [
+      "gdpr-5-2",
+      "gdpr-17-1"
+     ]
+    },
+    {
+     "name": "ground",
+     "type": "enum",
+     "values": [
+      "request",
+      "consent-withdrawn",
+      "objection",
+      "no-longer-necessary",
+      "unlawful",
+      "legal-obligation",
+      "retention-expired"
+     ],
+     "required": true,
+     "description": "Why the data was erased.",
+     "evidences": [
+      "gdpr-17-1"
+     ]
+    },
+    {
+     "name": "requested_at",
+     "type": "timestamp",
+     "required": false,
+     "description": "When the person asked, UTC, if they did.",
+     "evidences": [
+      "gdpr-17-1"
+     ]
+    },
+    {
+     "name": "erased_at",
+     "type": "timestamp",
+     "required": true,
+     "description": "When the erasure was completed, UTC.",
+     "evidences": [
+      "gdpr-17-1",
+      "gdpr-5-2"
+     ]
+    },
+    {
+     "name": "erased_record_digests",
+     "type": "list",
+     "items": {
+      "type": "digest"
+     },
+     "required": false,
+     "description": "The record_digests of sealed records whose underlying data was erased. Each seal stays and now proves only that a record existed.",
+     "evidences": [
+      "gdpr-5-2"
+     ]
+    },
+    {
+     "name": "systems",
+     "type": "list",
+     "items": {
+      "type": "reference"
+     },
+     "required": true,
+     "description": "Your references for the systems the data was erased from.",
+     "evidences": [
+      "gdpr-5-2",
+      "gdpr-17-1"
+     ]
+    }
+   ],
+   "example": {
+    "pack": "gdpr-accountability",
+    "pack_version": 1,
+    "kind": "gdpr.erasure",
+    "record_id": "erasure-2026-0042",
+    "subject_ref": "cust-77031",
+    "ground": "request",
+    "requested_at": "2026-10-01T08:00:00Z",
+    "erased_at": "2026-10-03T16:20:00Z",
+    "erased_record_digests": [
+     "8d2c4e6f0a1b3c5d7e9f1a2b4c6d8e0f2a4b6c8d0e2f4a6b8c0d2e4f6a8b0c2d"
+    ],
+    "systems": [
+     "crm",
+     "marketing-db"
+    ]
+   }
+  }
+ ],
+ "retention": "The GDPR states no fixed period for these records: keep them as long as you may need to demonstrate the consent or the erasure, and no longer. This pack does not decide it for you.",
+ "notes": "The records name people only by your own references; the personal data stays in your systems and erasable there. Recording a consent does not make it valid: whether consent was freely given, specific, informed and unambiguous is decided by the facts, not by the seal."
+}

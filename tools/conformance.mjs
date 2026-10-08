@@ -16,7 +16,8 @@
  * command that reads one case on stdin and prints its answer) and gets back a
  * result file it can publish. `artefacts` checks what an implementation
  * produced — an export, a single-entry proof, an evidence proof, a broker-desk
- * evidence pack, a record bundle, an RFC 3161 head timestamp — with the verifiers a regulator would use. `self` runs this
+ * evidence pack, a record bundle, an RFC 3161 head timestamp, a chain statement, a
+ * completeness or spot-check bundle, a selective disclosure, a co-seal — with the verifiers a regulator would use. `self` runs this
  * repository's own reference code through the same cases, which is how the
  * suite is tested against the code that defines the formats.
  *
@@ -36,7 +37,10 @@ import { fileURLToPath } from 'node:url';
 import { canonicalForm, verifyExport, verifyEntryProof } from './verify-ledger.mjs';
 import { leafHash, leafString, rootHash, headPayload, canonicalTimestamp, verifyInclusion, verifyConsistency, claimPayload, verifyClaim } from './merkle.mjs';
 import { loadKeyring, pickKey } from './keyring.mjs';
-import { canonicalRecord, recordDigest, acceptableRecord, checkBundleRecord, BUNDLE_FORMAT } from './records.mjs';
+import { canonicalRecord, recordDigest, acceptableRecord, checkBundleRecord, BUNDLE_FORMAT,
+  DISCLOSURE_BUNDLE_FORMAT, checkDisclosure, fieldSalt, fieldCommitment, sealedRecord } from './records.mjs';
+import { chainPayload, linksDigest, CHAIN_FORMAT } from './merkle.mjs';
+import { verifyChainStatement, checkCompleteness, checkSpotCheck, selectSample, COMPLETENESS_FORMAT, SPOT_CHECK_FORMAT } from './chains.mjs';
 import { verifyTimestampFile, TIMESTAMP_FORMAT } from './tsa.mjs';
 import { checkpointText, keyId, verifyNote, tilePath } from './note.mjs';
 import { statementDigest, parseSign1, sigStructure } from './cose.mjs';
@@ -140,6 +144,24 @@ export function buildCases(v) {
     add('cose.sig_structure', { protected_hex: v.scitt_receipt.protected_hex, payload_hex: v.scitt_receipt.root_hash }, v.scitt_receipt.sig_structure_hex);
   }
 
+  // Completeness chains (docs/completeness.md): the links digest and the signed statement's payload.
+  if (v.chain) {
+    add('chain.links_digest', { links: v.chain.statement.links }, v.chain.statement.links_digest);
+    add('chain.links_digest', { links: [] }, 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855');
+    const { links, ...statement } = v.chain.statement;
+    add('chain.payload', { statement }, v.chain.payload);
+  }
+  // Spot checks (docs/spot-checks.md): the positions a seed selects.
+  for (const s of v.spot_checks || []) add('spot_check.select', { seed: s.seed, population: s.population, sample: s.sample }, s.positions.join(','));
+  // Selective disclosure (docs/selective-disclosure.md): field salts, commitments and the sealed record.
+  if (v.disclosure) {
+    const d = v.disclosure;
+    for (const [name, salt] of Object.entries(d.field_salts)) add('disclosure.field_salt', { secret_hex: d.secret_hex, name }, salt);
+    for (const [name, c] of Object.entries(d.sealed_record.fields)) add('disclosure.commitment', { field_salt_hex: d.field_salts[name], name, value: d.record[name] }, c);
+    add('disclosure.sealed_record', { record: d.record, secret_hex: d.secret_hex }, d.sealed_canonical);
+    add('record.digest', { salt_hex: d.salt_hex, record: d.sealed_record }, d.record_digest);
+  }
+
   return { format: CASES_FORMAT, vectors: v.format, cases_digest: sha(JSON.stringify(cases)), cases };
 }
 
@@ -172,6 +194,12 @@ export async function referenceAnswer(c) {
     case 'tile.path': return tilePath(i.level, i.index, i.width);
     case 'scitt.statement_digest': return statementDigest(parseSign1(Buffer.from(i.statement_hex, 'hex')));
     case 'cose.sig_structure': return Buffer.from(sigStructure(Buffer.from(i.protected_hex, 'hex'), Buffer.from(i.payload_hex, 'hex'))).toString('hex');
+    case 'chain.links_digest': return linksDigest(i.links);
+    case 'chain.payload': return chainPayload(i.statement);
+    case 'spot_check.select': return selectSample(i.seed, i.population, i.sample).join(',');
+    case 'disclosure.field_salt': return fieldSalt(i.secret_hex, i.name);
+    case 'disclosure.commitment': return fieldCommitment(i.field_salt_hex, i.name, i.value);
+    case 'disclosure.sealed_record': return canonicalRecord(sealedRecord(i.record, i.secret_hex));
     default: throw new Error(`unknown operation ${c.op}`);
   }
 }
@@ -260,7 +288,7 @@ function checkSignature(ring, payload, signature, what) {
     : { failed: `${what}: the signature does not verify against the key supplied` };
 }
 
-async function verifyEvidenceProof(doc, savedHead) {
+export async function verifyEvidenceProof(doc, savedHead) {
   const entry = doc.entry || {};
   let leaf;
   try { leaf = await leafHash(enc(leafString(entry))); } catch { return { intact: false, reason: 'the proof carries no complete entry' }; }
@@ -276,6 +304,55 @@ async function verifyEvidenceProof(doc, savedHead) {
     if (!(await verifyClaim(entry, doc.signer_public_key))) return { intact: false, reason: 'the client signature does not verify over the claim payload with the signer\'s key' };
   }
   return { intact: true, leaf_index: Number(entry.leaf_index), tree_size: Number(head.tree_size), signed_by: entry.signer_key_id };
+}
+
+/**
+ * Co-sealing (docs/co-sealing.md, settled 7 October 2026 with the repository
+ * owner's decision): two parties who share a record and its salt each seal
+ * the same digest as a signed (v3) entry under their own key. Both entries
+ * intact, the same digest, two different signers and two different
+ * distributors: the record is one both of them put their name to. When the
+ * holder pins each party's public key (expected_signers), the entries must be
+ * signed with exactly those keys.
+ */
+export const COSEAL_FORMAT = 'riskrouter-coseal|1';
+
+async function checkCoseal(doc, ring) {
+  const lines = [];
+  const bundles = Array.isArray(doc.bundles) ? doc.bundles : [];
+  if (bundles.length < 2) return [{ failed: 'co-seal: needs the bundles of at least two parties' }];
+  const entries = [];
+  for (const [i, b] of bundles.entries()) {
+    for (const l of await checkArtefact(b, ring)) {
+      const [k, v] = Object.entries(l)[0];
+      lines.push({ [k]: `party ${i + 1}: ${v}` });
+    }
+    entries.push({ entry: b?.proof?.entry || {}, key: b?.proof?.signer_public_key });
+  }
+  const digests = new Set(entries.map((e) => e.entry.record_digest));
+  lines.push(digests.size === 1 ? { ok: `co-seal: every party sealed the same record digest ${[...digests][0]?.slice(0, 16)}…` }
+    : { failed: 'co-seal: the parties sealed different digests; this is not one record' });
+  const unsigned = entries.filter((e) => Number(e.entry.leaf_version) !== 3).length;
+  if (unsigned) lines.push({ failed: `co-seal: ${unsigned} entr${unsigned === 1 ? 'y is' : 'ies are'} not signed by its party (a v3 leaf is needed)` });
+  const signers = new Set(entries.map((e) => e.entry.signer_key_id));
+  const distributors = new Set(entries.map((e) => e.entry.distributor_id));
+  if (!unsigned) {
+    lines.push(signers.size === entries.length ? { ok: `co-seal: ${entries.length} different signers (${[...signers].join(', ')})` }
+      : { failed: 'co-seal: one key signed more than one of the entries; that is not two parties' });
+    lines.push(distributors.size === entries.length ? { ok: `co-seal: recorded by ${entries.length} different distributors` }
+      : { failed: 'co-seal: the entries were recorded by the same distributor; that is not two parties' });
+  }
+  if (Array.isArray(doc.expected_signers)) {
+    for (const [i, want] of doc.expected_signers.entries()) {
+      const got = entries[i]?.key;
+      const same = got && want && got.x === want.x && got.y === want.y && got.crv === want.crv;
+      lines.push(same ? { ok: `co-seal: party ${i + 1} signed with the key you pinned for it` }
+        : { failed: `co-seal: party ${i + 1} did not sign with the key you pinned for it` });
+    }
+  } else {
+    lines.push({ skipped: 'co-seal: no expected_signers pinned; check each party\'s key against one it published itself' });
+  }
+  return lines;
 }
 
 /** One artefact, by the format it declares (a pack declares none, so by shape). */
@@ -304,6 +381,20 @@ export async function checkArtefact(doc, ring) {
     const r = await verifyEvidenceProof(doc.proof || {});
     push(r.intact ? { ok: `evidence proof: entry ${r.leaf_index} is in the tree of size ${r.tree_size}${r.signed_by ? `, signed by ${r.signed_by}` : ''}` } : { failed: `evidence proof: ${r.reason}` });
     push(doc.proof?.head ? checkSignature(ring, headPayload(doc.proof.head), doc.proof.signature, 'evidence head') : { failed: 'evidence proof: carries no head' });
+  } else if (fmt === DISCLOSURE_BUNDLE_FORMAT) {
+    // Selective disclosure: the sealed commitment record, each field shown, then the proof.
+    for (const l of checkDisclosure(doc)) push(l);
+    const r = await verifyEvidenceProof(doc.proof || {});
+    push(r.intact ? { ok: `evidence proof: entry ${r.leaf_index} is in the tree of size ${r.tree_size}${r.signed_by ? `, signed by ${r.signed_by}` : ''}` } : { failed: `evidence proof: ${r.reason}` });
+    push(doc.proof?.head ? checkSignature(ring, headPayload(doc.proof.head), doc.proof.signature, 'evidence head') : { failed: 'evidence proof: carries no head' });
+  } else if (fmt === CHAIN_FORMAT) {
+    for (const l of (await verifyChainStatement(doc, ring)).lines) push(l);
+  } else if (fmt === COMPLETENESS_FORMAT) {
+    for (const l of await checkCompleteness(doc, ring)) push(l);
+  } else if (fmt === SPOT_CHECK_FORMAT) {
+    for (const l of await checkSpotCheck(doc, ring)) push(l);
+  } else if (fmt === COSEAL_FORMAT) {
+    for (const l of await checkCoseal(doc, ring)) push(l);
   } else if (doc?.demands_and_needs && doc?.evidence_proof && doc?.quote_proof) {
     const dn = doc.demands_and_needs;
     let digest = null;

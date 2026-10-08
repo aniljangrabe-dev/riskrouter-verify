@@ -1,0 +1,228 @@
+{
+ "format": "riskrouter-regime-pack|1",
+ "id": "cra",
+ "version": 1,
+ "title": "Cyber Resilience Act: what shipped, its components, and when a vulnerability was reported",
+ "regime": "Cyber Resilience Act",
+ "summary": "What a manufacturer of a product with digital elements records so it can show what it released, with which components, and that each report about an actively exploited vulnerability was sent within its deadline. The release and the reports stay with you; only their digests are sealed.",
+ "instruments": [
+  {
+   "id": "cra",
+   "name": "Regulation (EU) 2024/2847 (Cyber Resilience Act)",
+   "celex": "32024R2847",
+   "source": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+  }
+ ],
+ "articles": [
+  {
+   "id": "cra-13",
+   "instrument": "cra",
+   "ref": "Article 13",
+   "asks": "Manufacturers place products with digital elements on the market only if they meet the essential cybersecurity requirements of Annex I, whose Part II includes identifying and documenting the product's vulnerabilities and components, among other things by drawing up a software bill of materials."
+  },
+  {
+   "id": "cra-31",
+   "instrument": "cra",
+   "ref": "Article 31",
+   "asks": "The technical documentation, with the contents Annex VII sets out, is drawn up before the product is placed on the market and kept up to date."
+  },
+  {
+   "id": "cra-14-1",
+   "instrument": "cra",
+   "ref": "Article 14(1)",
+   "asks": "Notify any actively exploited vulnerability in the product that the manufacturer becomes aware of, simultaneously to the CSIRT designated as coordinator and to ENISA, via the single reporting platform."
+  },
+  {
+   "id": "cra-14-2",
+   "instrument": "cra",
+   "ref": "Article 14(2)",
+   "asks": "An early warning within 24 hours of becoming aware, a vulnerability notification within 72 hours, and a final report no later than 14 days after a corrective or mitigating measure is available."
+  }
+ ],
+ "kinds": [
+  {
+   "kind": "cra.release",
+   "title": "Release made available",
+   "when": "Each time a version is released: the artefact and its software bill of materials are sealed by their digests at that moment. A SCITT Signed Statement (POST /api/v2/evidence/statement) does the same for a supply chain that already speaks SCITT.",
+   "fields": [
+    {
+     "name": "product_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your reference for the product.",
+     "evidences": [
+      "cra-13",
+      "cra-31"
+     ]
+    },
+    {
+     "name": "version",
+     "type": "string",
+     "max_length": 80,
+     "required": true,
+     "description": "The version released.",
+     "evidences": [
+      "cra-31"
+     ]
+    },
+    {
+     "name": "released_at",
+     "type": "timestamp",
+     "required": true,
+     "description": "When it was made available, UTC.",
+     "evidences": [
+      "cra-31"
+     ]
+    },
+    {
+     "name": "artefact_digest",
+     "type": "digest",
+     "required": true,
+     "description": "SHA-256 of the released artefact exactly as shipped.",
+     "evidences": [
+      "cra-31"
+     ]
+    },
+    {
+     "name": "sbom_digest",
+     "type": "digest",
+     "required": true,
+     "description": "SHA-256 of the software bill of materials for this release.",
+     "evidences": [
+      "cra-13",
+      "cra-31"
+     ]
+    },
+    {
+     "name": "sbom_format",
+     "type": "enum",
+     "values": [
+      "cyclonedx",
+      "spdx",
+      "other"
+     ],
+     "required": false,
+     "description": "The format of the bill of materials.",
+     "evidences": [
+      "cra-13"
+     ]
+    },
+    {
+     "name": "support_period_end",
+     "type": "date",
+     "required": false,
+     "description": "The end of the support period you declared for this product.",
+     "evidences": [
+      "cra-13"
+     ]
+    }
+   ],
+   "example": {
+    "pack": "cra",
+    "pack_version": 1,
+    "kind": "cra.release",
+    "record_id": "rel-gw-4.2.1",
+    "product_ref": "edge-gateway",
+    "version": "4.2.1",
+    "released_at": "2026-10-06T12:00:00Z",
+    "artefact_digest": "6b8d0f2a4c6e8b0d2f4a6c8e0b2d4f6a8c0e2b4d6f8a0c2e4b6d8f0a2c4e6b8d",
+    "sbom_digest": "a0c2e4b6d8f0a2c4e6b8d0f2a4c6e8b0d2f4a6c8e0b2d4f6a8c0e2b4d6f8a0c2",
+    "sbom_format": "cyclonedx",
+    "support_period_end": "2031-12-31"
+   }
+  },
+  {
+   "kind": "cra.vulnerability-report",
+   "title": "Report on an actively exploited vulnerability sent",
+   "when": "Each time something is sent: the early warning, the vulnerability notification, the final report. The deadlines run from aware_at, and for the final report from the corrective measure.",
+   "fields": [
+    {
+     "name": "product_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your reference for the product.",
+     "evidences": [
+      "cra-14-1"
+     ]
+    },
+    {
+     "name": "vulnerability_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your reference for the vulnerability, or its CVE identifier.",
+     "evidences": [
+      "cra-14-1",
+      "cra-14-2"
+     ]
+    },
+    {
+     "name": "stage",
+     "type": "enum",
+     "values": [
+      "early-warning",
+      "vulnerability-notification",
+      "final-report"
+     ],
+     "required": true,
+     "description": "What was sent.",
+     "evidences": [
+      "cra-14-2"
+     ]
+    },
+    {
+     "name": "aware_at",
+     "type": "timestamp",
+     "required": true,
+     "description": "When you became aware of the active exploitation, UTC.",
+     "evidences": [
+      "cra-14-1",
+      "cra-14-2"
+     ]
+    },
+    {
+     "name": "corrective_measure_at",
+     "type": "timestamp",
+     "required": false,
+     "description": "When a corrective or mitigating measure became available, UTC; the final report's deadline runs from here.",
+     "evidences": [
+      "cra-14-2"
+     ]
+    },
+    {
+     "name": "submitted_at",
+     "type": "timestamp",
+     "required": true,
+     "description": "When it was sent, UTC.",
+     "evidences": [
+      "cra-14-1",
+      "cra-14-2"
+     ]
+    },
+    {
+     "name": "report_digest",
+     "type": "digest",
+     "required": true,
+     "description": "SHA-256 of what was sent, exactly as sent.",
+     "evidences": [
+      "cra-14-1",
+      "cra-14-2"
+     ]
+    }
+   ],
+   "example": {
+    "pack": "cra",
+    "pack_version": 1,
+    "kind": "cra.vulnerability-report",
+    "record_id": "vr-2026-0003-ew",
+    "product_ref": "edge-gateway",
+    "vulnerability_ref": "gw-2026-0003",
+    "stage": "early-warning",
+    "aware_at": "2026-10-02T07:30:00Z",
+    "submitted_at": "2026-10-02T19:05:00Z",
+    "report_digest": "c2e4b6d8f0a2c4e6b8d0f2a4c6e8b0d2f4a6c8e0b2d4f6a8c0e2b4d6f8a0c2e4"
+   }
+  }
+ ],
+ "retention": "The regulation requires the technical documentation to be kept for at least ten years after the product is placed on the market, or for the support period if that is longer. Article 14 has applied since 11 September 2026; most other obligations apply from 11 December 2027. This pack does not decide your period.",
+ "notes": "Whether a product is in scope, and in which class, is for the manufacturer to establish from the regulation. `node tools/deadline.mjs` checks the times of sealed reports against the 24-hour, 72-hour and 14-day deadlines."
+}

@@ -1,86 +1,489 @@
 {
-  "format": "riskrouter-regime-pack|1",
-  "id": "idd",
-  "version": 1,
-  "title": "Insurance distribution: demands and needs, advice and product information",
-  "regime": "Insurance Distribution Directive",
-  "summary": "What an insurance distributor records to show, later, what the customer needed, what was proposed and why, and what information the customer received before the contract.",
-  "instruments": [
-    { "id": "idd", "name": "Directive (EU) 2016/97 (Insurance Distribution Directive)", "celex": "32016L0097", "source": "https://eur-lex.europa.eu/eli/dir/2016/97/oj/eng" }
-  ],
-  "articles": [
-    { "id": "idd-20-1-dn", "instrument": "idd", "ref": "Article 20(1), first subparagraph", "asks": "Before a contract is concluded, specify the customer's demands and needs on the basis of information obtained from the customer, and give objective information about the product in a comprehensible form." },
-    { "id": "idd-20-1-consistent", "instrument": "idd", "ref": "Article 20(1), second subparagraph", "asks": "Any contract proposed must be consistent with the customer's insurance demands and needs." },
-    { "id": "idd-20-1-advice", "instrument": "idd", "ref": "Article 20(1), third subparagraph", "asks": "Where advice is given before a specific contract is concluded, give the customer a personalised recommendation explaining why a particular product would best meet their demands and needs." },
-    { "id": "idd-20-ipid", "instrument": "idd", "ref": "Article 20, paragraphs 4 to 9", "asks": "For non-life products, give the product information by way of the standardised insurance product information document (IPID)." },
-    { "id": "idd-23", "instrument": "idd", "ref": "Article 23", "asks": "How information reaches the customer: on paper, or on another durable medium or a website where the conditions for that are met." }
-  ],
-  "kinds": [
+ "format": "riskrouter-regime-pack|1",
+ "id": "idd",
+ "version": 1,
+ "title": "Insurance distribution: demands and needs, advice and product information",
+ "regime": "Insurance Distribution Directive",
+ "summary": "What an insurance distributor records to show, later, what the customer needed, what was proposed and why, and what information the customer received before the contract.",
+ "instruments": [
+  {
+   "id": "idd",
+   "name": "Directive (EU) 2016/97 (Insurance Distribution Directive)",
+   "celex": "32016L0097",
+   "source": "https://eur-lex.europa.eu/eli/dir/2016/97/oj/eng"
+  }
+ ],
+ "articles": [
+  {
+   "id": "idd-20-1-dn",
+   "instrument": "idd",
+   "ref": "Article 20(1), first subparagraph",
+   "asks": "Before a contract is concluded, specify the customer's demands and needs on the basis of information obtained from the customer, and give objective information about the product in a comprehensible form."
+  },
+  {
+   "id": "idd-20-1-consistent",
+   "instrument": "idd",
+   "ref": "Article 20(1), second subparagraph",
+   "asks": "Any contract proposed must be consistent with the customer's insurance demands and needs."
+  },
+  {
+   "id": "idd-20-1-advice",
+   "instrument": "idd",
+   "ref": "Article 20(1), third subparagraph",
+   "asks": "Where advice is given before a specific contract is concluded, give the customer a personalised recommendation explaining why a particular product would best meet their demands and needs."
+  },
+  {
+   "id": "idd-20-ipid",
+   "instrument": "idd",
+   "ref": "Article 20, paragraphs 4 to 9",
+   "asks": "For non-life products, give the product information by way of the standardised insurance product information document (IPID)."
+  },
+  {
+   "id": "idd-23",
+   "instrument": "idd",
+   "ref": "Article 23",
+   "asks": "How information reaches the customer: on paper, or on another durable medium or a website where the conditions for that are met."
+  },
+  {
+   "id": "idd-25-1",
+   "instrument": "idd",
+   "ref": "Article 25(1)",
+   "asks": "Insurance undertakings, and intermediaries that manufacture insurance products, maintain, operate and review a process for the approval of each insurance product, or significant adaptation of an existing one, before it is marketed or distributed to customers."
+  }
+ ],
+ "kinds": [
+  {
+   "kind": "idd.demands-needs",
+   "title": "Demands and needs",
+   "when": "Once the customer's demands and needs are specified, before any contract is concluded.",
+   "fields": [
     {
-      "kind": "idd.demands-needs",
-      "title": "Demands and needs",
-      "when": "Once the customer's demands and needs are specified, before any contract is concluded.",
-      "fields": [
-        { "name": "customer_ref", "type": "reference", "required": true, "description": "Your own reference for the customer. Never a name.", "evidences": ["idd-20-1-dn"] },
-        { "name": "product_class", "type": "string", "max_length": 80, "required": true, "description": "The class of cover discussed, in your own terms, such as motor or home.", "evidences": ["idd-20-1-dn"] },
-        { "name": "information_obtained", "type": "text", "required": true, "description": "What the customer told you, and how you obtained it.", "evidences": ["idd-20-1-dn"] },
-        { "name": "demands_and_needs", "type": "text", "required": true, "description": "The demands and needs you specified from that information.", "evidences": ["idd-20-1-dn"] },
-        { "name": "proposed_product_ref", "type": "reference", "required": false, "description": "Your reference for the product you proposed, if any.", "evidences": ["idd-20-1-consistent"] },
-        { "name": "consistency_note", "type": "text", "required": false, "description": "Why the proposed contract is consistent with those demands and needs.", "evidences": ["idd-20-1-consistent"] },
-        { "name": "advice_given", "type": "boolean", "required": true, "description": "Whether you gave advice. If true, an idd.recommendation record follows.", "evidences": ["idd-20-1-advice"] },
-        { "name": "adviser_ref", "type": "reference", "required": false, "description": "Your reference for the person who handled the customer. Never a name.", "evidences": [] },
-        { "name": "specified_at", "type": "timestamp", "required": true, "description": "When the demands and needs were specified, UTC.", "evidences": ["idd-20-1-dn"] }
-      ],
-      "example": {
-        "pack": "idd", "pack_version": 1, "kind": "idd.demands-needs", "record_id": "dn-2026-000417",
-        "customer_ref": "cust-88213", "product_class": "motor",
-        "information_obtained": "Interview at the office. Commutes 30 km a day by e-bike, stores it in a shared garage, has no other cover for theft.",
-        "demands_and_needs": "Theft cover for the e-bike including the battery, and roadside assistance for breakdowns on the commute.",
-        "proposed_product_ref": "prod-ebike-plus-2026", "consistency_note": "Covers theft of bike and battery from a shared garage and includes roadside assistance.",
-        "advice_given": true, "adviser_ref": "staff-014", "specified_at": "2026-09-23T10:15:00Z"
-      }
+     "name": "customer_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your own reference for the customer. Never a name.",
+     "evidences": [
+      "idd-20-1-dn"
+     ]
     },
     {
-      "kind": "idd.recommendation",
-      "title": "Personalised recommendation",
-      "when": "When advice is given, once the recommendation is handed to the customer.",
-      "fields": [
-        { "name": "customer_ref", "type": "reference", "required": true, "description": "Your own reference for the customer. Never a name.", "evidences": ["idd-20-1-advice"] },
-        { "name": "demands_needs_record_id", "type": "reference", "required": true, "description": "The record_id of the idd.demands-needs record this recommendation answers.", "evidences": ["idd-20-1-advice"] },
-        { "name": "recommended_product_ref", "type": "reference", "required": true, "description": "Your reference for the product recommended.", "evidences": ["idd-20-1-advice"] },
-        { "name": "reasons", "type": "text", "required": true, "description": "Why this product would best meet the customer's demands and needs.", "evidences": ["idd-20-1-advice"] },
-        { "name": "document_digest", "type": "digest", "required": false, "description": "SHA-256 of the recommendation document exactly as the customer received it.", "evidences": ["idd-20-1-advice", "idd-23"] },
-        { "name": "medium", "type": "enum", "values": ["paper", "durable-medium", "website"], "required": true, "description": "How the recommendation reached the customer.", "evidences": ["idd-23"] },
-        { "name": "given_at", "type": "timestamp", "required": true, "description": "When the recommendation was given, UTC.", "evidences": ["idd-20-1-advice"] }
-      ],
-      "example": {
-        "pack": "idd", "pack_version": 1, "kind": "idd.recommendation", "record_id": "rec-2026-000211",
-        "customer_ref": "cust-88213", "demands_needs_record_id": "dn-2026-000417", "recommended_product_ref": "prod-ebike-plus-2026",
-        "reasons": "The only product in our range that covers battery theft from a shared garage; roadside assistance is included rather than an extra.",
-        "document_digest": "3b0a7c1d9e2f4a5b6c7d8e9f0a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d",
-        "medium": "durable-medium", "given_at": "2026-09-23T10:40:00Z"
-      }
+     "name": "product_class",
+     "type": "string",
+     "max_length": 80,
+     "required": true,
+     "description": "The class of cover discussed, in your own terms, such as motor or home.",
+     "evidences": [
+      "idd-20-1-dn"
+     ]
     },
     {
-      "kind": "idd.ipid-provided",
-      "title": "Product information document handed over",
-      "when": "For a non-life product, when the IPID is given to the customer.",
-      "fields": [
-        { "name": "customer_ref", "type": "reference", "required": true, "description": "Your own reference for the customer. Never a name.", "evidences": ["idd-20-ipid"] },
-        { "name": "product_ref", "type": "reference", "required": true, "description": "Your reference for the product.", "evidences": ["idd-20-ipid"] },
-        { "name": "ipid_version", "type": "string", "max_length": 80, "required": true, "description": "The version of the IPID, as the manufacturer labels it.", "evidences": ["idd-20-ipid"] },
-        { "name": "ipid_digest", "type": "digest", "required": true, "description": "SHA-256 of the IPID file exactly as handed over.", "evidences": ["idd-20-ipid"] },
-        { "name": "medium", "type": "enum", "values": ["paper", "durable-medium", "website"], "required": true, "description": "How the IPID reached the customer.", "evidences": ["idd-23"] },
-        { "name": "provided_at", "type": "timestamp", "required": true, "description": "When it was provided, UTC.", "evidences": ["idd-20-ipid"] }
-      ],
-      "example": {
-        "pack": "idd", "pack_version": 1, "kind": "idd.ipid-provided", "record_id": "ipid-2026-000388",
-        "customer_ref": "cust-88213", "product_ref": "prod-ebike-plus-2026", "ipid_version": "2026-03",
-        "ipid_digest": "9c1f0e2d3b4a59687766554433221100ffeeddccbbaa99887766554433221100",
-        "medium": "durable-medium", "provided_at": "2026-09-23T10:41:00Z"
-      }
+     "name": "information_obtained",
+     "type": "text",
+     "required": true,
+     "description": "What the customer told you, and how you obtained it.",
+     "evidences": [
+      "idd-20-1-dn"
+     ]
+    },
+    {
+     "name": "demands_and_needs",
+     "type": "text",
+     "required": true,
+     "description": "The demands and needs you specified from that information.",
+     "evidences": [
+      "idd-20-1-dn"
+     ]
+    },
+    {
+     "name": "proposed_product_ref",
+     "type": "reference",
+     "required": false,
+     "description": "Your reference for the product you proposed, if any.",
+     "evidences": [
+      "idd-20-1-consistent"
+     ]
+    },
+    {
+     "name": "consistency_note",
+     "type": "text",
+     "required": false,
+     "description": "Why the proposed contract is consistent with those demands and needs.",
+     "evidences": [
+      "idd-20-1-consistent"
+     ]
+    },
+    {
+     "name": "advice_given",
+     "type": "boolean",
+     "required": true,
+     "description": "Whether you gave advice. If true, an idd.recommendation record follows.",
+     "evidences": [
+      "idd-20-1-advice"
+     ]
+    },
+    {
+     "name": "adviser_ref",
+     "type": "reference",
+     "required": false,
+     "description": "Your reference for the person who handled the customer. Never a name.",
+     "evidences": []
+    },
+    {
+     "name": "specified_at",
+     "type": "timestamp",
+     "required": true,
+     "description": "When the demands and needs were specified, UTC.",
+     "evidences": [
+      "idd-20-1-dn"
+     ]
     }
-  ],
-  "retention": "This pack does not state how long to keep these records. Check the period that applies to you with your supervisor or your professional federation. In Belgium the directive is transposed by the Act of 4 April 2014 on insurance, and the FSMA supervises its conduct rules.",
-  "notes": "The Worker's own quote ledger (v1) can record what was proposed and priced; this pack covers what stays with you."
+   ],
+   "example": {
+    "pack": "idd",
+    "pack_version": 1,
+    "kind": "idd.demands-needs",
+    "record_id": "dn-2026-000417",
+    "customer_ref": "cust-88213",
+    "product_class": "motor",
+    "information_obtained": "Interview at the office. Commutes 30 km a day by e-bike, stores it in a shared garage, has no other cover for theft.",
+    "demands_and_needs": "Theft cover for the e-bike including the battery, and roadside assistance for breakdowns on the commute.",
+    "proposed_product_ref": "prod-ebike-plus-2026",
+    "consistency_note": "Covers theft of bike and battery from a shared garage and includes roadside assistance.",
+    "advice_given": true,
+    "adviser_ref": "staff-014",
+    "specified_at": "2026-09-23T10:15:00Z"
+   }
+  },
+  {
+   "kind": "idd.recommendation",
+   "title": "Personalised recommendation",
+   "when": "When advice is given, once the recommendation is handed to the customer.",
+   "fields": [
+    {
+     "name": "customer_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your own reference for the customer. Never a name.",
+     "evidences": [
+      "idd-20-1-advice"
+     ]
+    },
+    {
+     "name": "demands_needs_record_id",
+     "type": "reference",
+     "required": true,
+     "description": "The record_id of the idd.demands-needs record this recommendation answers.",
+     "evidences": [
+      "idd-20-1-advice"
+     ]
+    },
+    {
+     "name": "recommended_product_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your reference for the product recommended.",
+     "evidences": [
+      "idd-20-1-advice"
+     ]
+    },
+    {
+     "name": "reasons",
+     "type": "text",
+     "required": true,
+     "description": "Why this product would best meet the customer's demands and needs.",
+     "evidences": [
+      "idd-20-1-advice"
+     ]
+    },
+    {
+     "name": "document_digest",
+     "type": "digest",
+     "required": false,
+     "description": "SHA-256 of the recommendation document exactly as the customer received it.",
+     "evidences": [
+      "idd-20-1-advice",
+      "idd-23"
+     ]
+    },
+    {
+     "name": "medium",
+     "type": "enum",
+     "values": [
+      "paper",
+      "durable-medium",
+      "website"
+     ],
+     "required": true,
+     "description": "How the recommendation reached the customer.",
+     "evidences": [
+      "idd-23"
+     ]
+    },
+    {
+     "name": "given_at",
+     "type": "timestamp",
+     "required": true,
+     "description": "When the recommendation was given, UTC.",
+     "evidences": [
+      "idd-20-1-advice"
+     ]
+    }
+   ],
+   "example": {
+    "pack": "idd",
+    "pack_version": 1,
+    "kind": "idd.recommendation",
+    "record_id": "rec-2026-000211",
+    "customer_ref": "cust-88213",
+    "demands_needs_record_id": "dn-2026-000417",
+    "recommended_product_ref": "prod-ebike-plus-2026",
+    "reasons": "The only product in our range that covers battery theft from a shared garage; roadside assistance is included rather than an extra.",
+    "document_digest": "3b0a7c1d9e2f4a5b6c7d8e9f0a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d",
+    "medium": "durable-medium",
+    "given_at": "2026-09-23T10:40:00Z"
+   }
+  },
+  {
+   "kind": "idd.ipid-provided",
+   "title": "Product information document handed over",
+   "when": "For a non-life product, when the IPID is given to the customer.",
+   "fields": [
+    {
+     "name": "customer_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your own reference for the customer. Never a name.",
+     "evidences": [
+      "idd-20-ipid"
+     ]
+    },
+    {
+     "name": "product_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your reference for the product.",
+     "evidences": [
+      "idd-20-ipid"
+     ]
+    },
+    {
+     "name": "ipid_version",
+     "type": "string",
+     "max_length": 80,
+     "required": true,
+     "description": "The version of the IPID, as the manufacturer labels it.",
+     "evidences": [
+      "idd-20-ipid"
+     ]
+    },
+    {
+     "name": "ipid_digest",
+     "type": "digest",
+     "required": true,
+     "description": "SHA-256 of the IPID file exactly as handed over.",
+     "evidences": [
+      "idd-20-ipid"
+     ]
+    },
+    {
+     "name": "medium",
+     "type": "enum",
+     "values": [
+      "paper",
+      "durable-medium",
+      "website"
+     ],
+     "required": true,
+     "description": "How the IPID reached the customer.",
+     "evidences": [
+      "idd-23"
+     ]
+    },
+    {
+     "name": "provided_at",
+     "type": "timestamp",
+     "required": true,
+     "description": "When it was provided, UTC.",
+     "evidences": [
+      "idd-20-ipid"
+     ]
+    }
+   ],
+   "example": {
+    "pack": "idd",
+    "pack_version": 1,
+    "kind": "idd.ipid-provided",
+    "record_id": "ipid-2026-000388",
+    "customer_ref": "cust-88213",
+    "product_ref": "prod-ebike-plus-2026",
+    "ipid_version": "2026-03",
+    "ipid_digest": "9c1f0e2d3b4a59687766554433221100ffeeddccbbaa99887766554433221100",
+    "medium": "durable-medium",
+    "provided_at": "2026-09-23T10:41:00Z"
+   }
+  },
+  {
+   "kind": "idd.pre-contract-disclosure",
+   "title": "Pre-contract information provided",
+   "when": "When the pre-contract documents reach the customer: each is sealed by its digest, and the customer can be given the receipt too, so both sides hold the same evidence of what was provided.",
+   "fields": [
+    {
+     "name": "customer_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your reference for the customer, never a name.",
+     "evidences": [
+      "idd-23"
+     ]
+    },
+    {
+     "name": "contract_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your reference for the proposed contract.",
+     "evidences": [
+      "idd-23",
+      "idd-20-ipid"
+     ]
+    },
+    {
+     "name": "documents",
+     "type": "list",
+     "items": {
+      "type": "digest"
+     },
+     "required": true,
+     "description": "SHA-256 of each document provided, exactly as provided (the IPID, the terms, the demands-and-needs statement).",
+     "evidences": [
+      "idd-23",
+      "idd-20-ipid"
+     ]
+    },
+    {
+     "name": "medium",
+     "type": "enum",
+     "values": [
+      "paper",
+      "durable-medium",
+      "website"
+     ],
+     "required": true,
+     "description": "How the documents were provided.",
+     "evidences": [
+      "idd-23"
+     ]
+    },
+    {
+     "name": "provided_at",
+     "type": "timestamp",
+     "required": true,
+     "description": "When they were provided, UTC.",
+     "evidences": [
+      "idd-23",
+      "idd-20-ipid"
+     ]
+    },
+    {
+     "name": "product_version_record_id",
+     "type": "reference",
+     "required": false,
+     "description": "The record_id of the idd.product-version in force.",
+     "evidences": [
+      "idd-23"
+     ]
+    }
+   ],
+   "example": {
+    "pack": "idd",
+    "pack_version": 1,
+    "kind": "idd.pre-contract-disclosure",
+    "record_id": "pcd-2026-6620",
+    "customer_ref": "cl-6620",
+    "contract_ref": "prop-6620-home",
+    "documents": [
+     "c4e6b8d0f2a4c6e8b0d2f4a6c8e0b2d4f6a8c0e2b4d6f8a0c2e4b6d8f0a2c4e6",
+     "1e3f5a7b9c1d3e5f7a9b1c3d5e7f9a1b3c5d7e9f1a3b5c7d9e1f3a5b7c9d1e3f"
+    ],
+    "medium": "durable-medium",
+    "provided_at": "2026-10-07T13:20:00Z",
+    "product_version_record_id": "pv-home-2026-2"
+   }
+  },
+  {
+   "kind": "idd.product-version",
+   "title": "Product version approved",
+   "when": "Each time a product, or a significant adaptation of it, is approved: its terms and target market are sealed by their digests, so which terms applied on a given day can be shown.",
+   "fields": [
+    {
+     "name": "product_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your reference for the product.",
+     "evidences": [
+      "idd-25-1"
+     ]
+    },
+    {
+     "name": "version",
+     "type": "string",
+     "max_length": 80,
+     "required": true,
+     "description": "Your version label.",
+     "evidences": [
+      "idd-25-1"
+     ]
+    },
+    {
+     "name": "terms_digest",
+     "type": "digest",
+     "required": true,
+     "description": "SHA-256 of the terms and conditions exactly as approved.",
+     "evidences": [
+      "idd-25-1"
+     ]
+    },
+    {
+     "name": "target_market_digest",
+     "type": "digest",
+     "required": false,
+     "description": "SHA-256 of the target market definition as approved.",
+     "evidences": [
+      "idd-25-1"
+     ]
+    },
+    {
+     "name": "approved_at",
+     "type": "timestamp",
+     "required": true,
+     "description": "When the product version was approved, UTC.",
+     "evidences": [
+      "idd-25-1"
+     ]
+    },
+    {
+     "name": "effective_from",
+     "type": "date",
+     "required": true,
+     "description": "From when it may be distributed.",
+     "evidences": [
+      "idd-25-1"
+     ]
+    }
+   ],
+   "example": {
+    "pack": "idd",
+    "pack_version": 1,
+    "kind": "idd.product-version",
+    "record_id": "pv-home-2026-2",
+    "product_ref": "home-contents",
+    "version": "2026.2",
+    "terms_digest": "3a5b7c9d1e3f5a7b9c1d3e5f7a9b1c3d5e7f9a1b3c5d7e9f1a3b5c7d9e1f3a5b",
+    "target_market_digest": "9c1d3e5f7a9b1c3d5e7f9a1b3c5d7e9f1a3b5c7d9e1f3a5b7c9d1e3f5a7b9c1d",
+    "approved_at": "2026-09-15T09:00:00Z",
+    "effective_from": "2026-10-01"
+   }
+  }
+ ],
+ "retention": "This pack does not state how long to keep these records. Check the period that applies to you with your supervisor or your professional federation. In Belgium the directive is transposed by the Act of 4 April 2014 on insurance, and the FSMA supervises its conduct rules.",
+ "notes": "The Worker's own quote ledger (v1) can record what was proposed and priced; this pack covers what stays with you."
 }

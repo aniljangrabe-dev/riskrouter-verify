@@ -508,5 +508,157 @@
       "width": 1,
       "path": "tile/2/x001/000.p/1"
     }
-  ]
+  ],
+  "chain": {
+    "note": "chain_tag = HMAC-SHA256(secret, \"riskrouter-chain-tag|1|\" || name) is a recommendation; the statement and its payload are frozen.",
+    "secret_hex": "0f0e0d0c0b0a09080706050403020100",
+    "name": "advice-desk-1",
+    "chain_tag": "424a79a5237644cf6c7dabbee5c422295f14e55b39040b379b3fa54fb0535144",
+    "statement": {
+      "chain_tag": "424a79a5237644cf6c7dabbee5c422295f14e55b39040b379b3fa54fb0535144",
+      "length": 3,
+      "from": 1,
+      "to": 3,
+      "links": [
+        {
+          "chain_seq": 1,
+          "leaf_index": 1,
+          "created_at": "2026-09-23T12:00:01.000000Z",
+          "record_digest": "32e89761ab8f7e043274026ee0ef55d1a7ccc99f46ccab49d22d3438f64a0910"
+        },
+        {
+          "chain_seq": 2,
+          "leaf_index": 4,
+          "created_at": "2026-09-23T12:00:04.000000Z",
+          "record_digest": "d6c33eb29ab920ce48e72305f86c903a41c51cf76730e4713620fbe2920ae4b7"
+        },
+        {
+          "chain_seq": 3,
+          "leaf_index": 6,
+          "created_at": "2026-09-23T12:00:06.000000Z",
+          "record_digest": "d8800c515b012bca5252e7df034162682a947d378a34830ed6f8a63f3440f1ad"
+        }
+      ],
+      "links_digest": "f8e3415e745b201da9bcab4e800a310b5b7e7b89515b66c7db0d1fb62f7d8d27",
+      "head": {
+        "tree_size": 7,
+        "root_hash": "2294fbaaa1e8a9151eb29d8d884c3c596b87f62d613b1b6e9c99b45a6fb3f184",
+        "timestamp": "2026-09-23T12:05:00.000Z"
+      }
+    },
+    "payload": "riskrouter-evidence-chain|v1|424a79a5237644cf6c7dabbee5c422295f14e55b39040b379b3fa54fb0535144|3|7|2294fbaaa1e8a9151eb29d8d884c3c596b87f62d613b1b6e9c99b45a6fb3f184|2026-09-23T12:05:00.000Z|1|3|f8e3415e745b201da9bcab4e800a310b5b7e7b89515b66c7db0d1fb62f7d8d27"
+  },
+  "spot_checks": [
+    {
+      "seed": "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f",
+      "population": 1000,
+      "sample": 10,
+      "positions": [
+        234,
+        243,
+        955,
+        993,
+        512,
+        266,
+        384,
+        846,
+        618,
+        869
+      ]
+    },
+    {
+      "seed": "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f",
+      "population": 7,
+      "sample": 7,
+      "positions": [
+        3,
+        4,
+        2,
+        6,
+        1,
+        5,
+        7
+      ]
+    },
+    {
+      "seed": "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f",
+      "population": 1,
+      "sample": 3,
+      "positions": [
+        1
+      ]
+    },
+    {
+      "seed": "5c91447ddccea0e3c935e4b41ce2d0a8f2535432478df5380507628bbe5e0525",
+      "population": 250000,
+      "sample": 25,
+      "positions": [
+        8990,
+        140031,
+        50079,
+        200940,
+        16705,
+        65222,
+        179917,
+        89338,
+        242103,
+        56741,
+        165446,
+        159453,
+        246223,
+        202131,
+        1132,
+        131807,
+        36387,
+        78143,
+        157862,
+        233940,
+        231245,
+        209950,
+        1276,
+        60395,
+        236578
+      ]
+    }
+  ],
+  "disclosure": {
+    "secret_hex": "1f1e1d1c1b1a191817161514131211100f0e0d0c0b0a09080706050403020100",
+    "salt_hex": "000102030405060708090a0b0c0d0e0f",
+    "record": {
+      "kind": "credit.decision",
+      "record_id": "cr-2026-118",
+      "customer_ref": "cu-77031",
+      "score": 612,
+      "outcome": "declined",
+      "reasons": [
+        "debt-to-income above 45 %",
+        "two missed payments in 12 months"
+      ],
+      "reviewed_by_human": true
+    },
+    "field_salts": {
+      "customer_ref": "b1c4b01fa80bedc0e3195722afd2539b983466d7b62f007c64d52efd390c406f",
+      "kind": "30b6a28f10048fbcf9935558c723aa705c3bb7f01f66a15bdc8085250a2a04fd",
+      "outcome": "dd68690cc4035f6592c4ddc177f74a3552417efa1f7000b96ed567cfc5569fb2",
+      "reasons": "cd16cd212189329163603ade319fc45e16b13f7765b4030f60dd656f5b90c11c",
+      "record_id": "71aee632bddd27c2057e3730a6598c798425e167964dcff770cab684293124fe",
+      "reviewed_by_human": "ba98b630a14ba9991c2f4bd38c508902f84d371b1789aea6d241ad6973af6d8d",
+      "score": "95a1528766c64010364d5aaf421235a0dc3386c26b60e440c5c6dbf8b40a55fc"
+    },
+    "sealed_record": {
+      "format": "riskrouter-disclosable|1",
+      "fields": {
+        "customer_ref": "edd5b8e423b327e593f7dd3d33b9b1ac9a5f9c5911ad02406d86054639163217",
+        "kind": "c3cb75cf1455505008416858f945413d42d3d49ba6c30ef18aec8126381f2eae",
+        "outcome": "f165ac37118901135c1670397d00d6d8f24920f63e67128bc95df604f3b54aa6",
+        "reasons": "674682d6dcecca05f2c2b2eda620ad089473c8d624b98f057066e031a497c833",
+        "record_id": "351e803dff71bd225d3993a3679d954205732e3581f4058199fb82bfd6c0ace6",
+        "reviewed_by_human": "e1cf55429c381d231d54891320c5542c93528dd4c55497e19518ba7bcbf51b51",
+        "score": "20c9767720c53134db4570b96403b6ada50346513dec0d2157f30a88fcc4f09a"
+      },
+      "kind": "credit.decision"
+    },
+    "sealed_canonical": "{\"fields\":{\"customer_ref\":\"edd5b8e423b327e593f7dd3d33b9b1ac9a5f9c5911ad02406d86054639163217\",\"kind\":\"c3cb75cf1455505008416858f945413d42d3d49ba6c30ef18aec8126381f2eae\",\"outcome\":\"f165ac37118901135c1670397d00d6d8f24920f63e67128bc95df604f3b54aa6\",\"reasons\":\"674682d6dcecca05f2c2b2eda620ad089473c8d624b98f057066e031a497c833\",\"record_id\":\"351e803dff71bd225d3993a3679d954205732e3581f4058199fb82bfd6c0ace6\",\"reviewed_by_human\":\"e1cf55429c381d231d54891320c5542c93528dd4c55497e19518ba7bcbf51b51\",\"score\":\"20c9767720c53134db4570b96403b6ada50346513dec0d2157f30a88fcc4f09a\"},\"format\":\"riskrouter-disclosable|1\",\"kind\":\"credit.decision\"}",
+    "record_digest": "35ffd05f77d6468f252f718305307bc943e0651fb8c2ca79e5fdfa1b1f2ea3f9"
+  }
 }

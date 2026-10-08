@@ -1,0 +1,192 @@
+{
+ "format": "riskrouter-regime-pack|1",
+ "id": "procurement",
+ "version": 1,
+ "title": "Public procurement: tenders received and evaluations fixed before prices are opened",
+ "regime": "Public procurement",
+ "summary": "What a contracting authority records so it can show which tenders it received and when, and that the quality scores were fixed before the prices were opened: the documentation that has to justify each decision in a procedure.",
+ "instruments": [
+  {
+   "id": "proc",
+   "name": "Directive 2014/24/EU (public procurement)",
+   "celex": "32014L0024",
+   "source": "https://eur-lex.europa.eu/eli/dir/2014/24/oj/eng"
+  }
+ ],
+ "articles": [
+  {
+   "id": "proc-67-1",
+   "instrument": "proc",
+   "ref": "Article 67(1)",
+   "asks": "Contracting authorities base the award of public contracts on the most economically advantageous tender."
+  },
+  {
+   "id": "proc-84-2",
+   "instrument": "proc",
+   "ref": "Article 84(2)",
+   "asks": "Contracting authorities document the progress of all procurement procedures and keep sufficient documentation to justify decisions taken at all stages, such as on communications with economic operators, internal deliberations, selection and award; the documentation is kept for at least three years from the date of award."
+  }
+ ],
+ "kinds": [
+  {
+   "kind": "procurement.tender-received",
+   "title": "Tender received",
+   "when": "When each tender arrives, before anything is opened: its digest is sealed, so a tender cannot be swapped or backdated.",
+   "fields": [
+    {
+     "name": "procedure_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your reference for the procedure.",
+     "evidences": [
+      "proc-84-2"
+     ]
+    },
+    {
+     "name": "lot_ref",
+     "type": "reference",
+     "required": false,
+     "description": "The lot, if the procedure has lots.",
+     "evidences": [
+      "proc-84-2"
+     ]
+    },
+    {
+     "name": "tenderer_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your reference for the tenderer.",
+     "evidences": [
+      "proc-84-2"
+     ]
+    },
+    {
+     "name": "received_at",
+     "type": "timestamp",
+     "required": true,
+     "description": "When it was received, UTC.",
+     "evidences": [
+      "proc-84-2"
+     ]
+    },
+    {
+     "name": "tender_digest",
+     "type": "digest",
+     "required": true,
+     "description": "SHA-256 of the tender exactly as received (the archive the platform gives you).",
+     "evidences": [
+      "proc-84-2"
+     ]
+    }
+   ],
+   "example": {
+    "pack": "procurement",
+    "pack_version": 1,
+    "kind": "procurement.tender-received",
+    "record_id": "tr-2026-017-03",
+    "procedure_ref": "proc-2026-017",
+    "tenderer_ref": "op-3",
+    "received_at": "2026-10-05T11:58:21Z",
+    "tender_digest": "2c4e6b8d0f2a4c6e8b0d2f4a6c8e0b2d4f6a8c0e2b4d6f8a0c2e4b6d8f0a2c4e"
+   }
+  },
+  {
+   "kind": "procurement.evaluation-freeze",
+   "title": "Evaluation fixed at a stage",
+   "when": "When the committee fixes its scores at a stage, before the next stage begins: in particular, the quality scores before the price envelopes are opened.",
+   "fields": [
+    {
+     "name": "procedure_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your reference for the procedure.",
+     "evidences": [
+      "proc-84-2"
+     ]
+    },
+    {
+     "name": "lot_ref",
+     "type": "reference",
+     "required": false,
+     "description": "The lot, if the procedure has lots.",
+     "evidences": [
+      "proc-84-2"
+     ]
+    },
+    {
+     "name": "stage",
+     "type": "enum",
+     "values": [
+      "selection",
+      "quality-before-price",
+      "award"
+     ],
+     "required": true,
+     "description": "The stage the scores belong to.",
+     "evidences": [
+      "proc-84-2",
+      "proc-67-1"
+     ]
+    },
+    {
+     "name": "frozen_at",
+     "type": "timestamp",
+     "required": true,
+     "description": "When the scores were fixed, UTC.",
+     "evidences": [
+      "proc-84-2"
+     ]
+    },
+    {
+     "name": "criteria_digest",
+     "type": "digest",
+     "required": true,
+     "description": "SHA-256 of the award criteria and weightings as published.",
+     "evidences": [
+      "proc-67-1",
+      "proc-84-2"
+     ]
+    },
+    {
+     "name": "scores_digest",
+     "type": "digest",
+     "required": true,
+     "description": "SHA-256 of the score sheet exactly as fixed.",
+     "evidences": [
+      "proc-84-2"
+     ]
+    },
+    {
+     "name": "committee_refs",
+     "type": "list",
+     "items": {
+      "type": "reference"
+     },
+     "required": true,
+     "description": "Your references for the committee members who fixed it.",
+     "evidences": [
+      "proc-84-2"
+     ]
+    }
+   ],
+   "example": {
+    "pack": "procurement",
+    "pack_version": 1,
+    "kind": "procurement.evaluation-freeze",
+    "record_id": "ef-2026-017-q",
+    "procedure_ref": "proc-2026-017",
+    "stage": "quality-before-price",
+    "frozen_at": "2026-10-14T16:00:00Z",
+    "criteria_digest": "8b0d2f4a6c8e0b2d4f6a8c0e2b4d6f8a0c2e4b6d8f0a2c4e6b8d0f2a4c6e8b0d",
+    "scores_digest": "d8f0a2c4e6b8d0f2a4c6e8b0d2f4a6c8e0b2d4f6a8c0e2b4d6f8a0c2e4b6d8f0",
+    "committee_refs": [
+     "eval-1",
+     "eval-2",
+     "eval-3"
+    ]
+   }
+  }
+ ],
+ "retention": "Article 84(2) states at least three years from the date of award of the contract. Your national law or funding rules may set a longer period; this pack does not decide it for you.",
+ "notes": "The tenders and the score sheets stay with you; only their digests are sealed. Utilities procurement under Directive 2014/25/EU and concessions under Directive 2014/23/EU have their own documentation articles, not mapped here."
+}

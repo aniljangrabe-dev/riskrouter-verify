@@ -1,73 +1,403 @@
 {
-  "format": "riskrouter-regime-pack|1",
-  "id": "mifid2",
-  "version": 1,
-  "title": "Investment advice: the suitability assessment and the statement on suitability",
-  "regime": "MiFID II",
-  "summary": "What an investment firm records to show what it knew about the client when it advised, what it advised, and that the statement on suitability existed, unaltered, before the transaction.",
-  "instruments": [
-    { "id": "mifid2", "name": "Directive 2014/65/EU (MiFID II)", "celex": "32014L0065", "source": "https://eur-lex.europa.eu/eli/dir/2014/65/oj/eng" },
-    { "id": "mifid2-dr", "name": "Commission Delegated Regulation (EU) 2017/565", "celex": "32017R0565", "source": "https://eur-lex.europa.eu/eli/reg_del/2017/565/oj/eng" }
-  ],
-  "articles": [
-    { "id": "mifid2-25-2", "instrument": "mifid2", "ref": "Article 25(2)", "asks": "When providing investment advice or portfolio management, obtain the information needed on the client's knowledge and experience in the relevant investment field, financial situation including ability to bear losses, and investment objectives including risk tolerance, so as to recommend what is suitable." },
-    { "id": "mifid2-25-6", "instrument": "mifid2", "ref": "Article 25(6)", "asks": "When providing investment advice, before the transaction is made, give the retail client a statement on suitability in a durable medium, specifying the advice given and how it meets the client's preferences, objectives and other characteristics." },
-    { "id": "mifid2-dr-54", "instrument": "mifid2-dr", "ref": "Article 54", "asks": "How the suitability assessment is carried out, and what the suitability report must contain." },
-    { "id": "mifid2-dr-72-1", "instrument": "mifid2-dr", "ref": "Article 72(1)", "asks": "Records are kept so the competent authority can access them readily and reconstitute each key stage, so any corrections or amendments and the contents before them can be easily ascertained, and so they cannot otherwise be manipulated or altered." }
-  ],
-  "kinds": [
+ "format": "riskrouter-regime-pack|1",
+ "id": "mifid2",
+ "version": 1,
+ "title": "Investment advice: the suitability assessment and the statement on suitability",
+ "regime": "MiFID II",
+ "summary": "What an investment firm records to show what it knew about the client when it advised, what it advised, and that the statement on suitability existed, unaltered, before the transaction.",
+ "instruments": [
+  {
+   "id": "mifid2",
+   "name": "Directive 2014/65/EU (MiFID II)",
+   "celex": "32014L0065",
+   "source": "https://eur-lex.europa.eu/eli/dir/2014/65/oj/eng"
+  },
+  {
+   "id": "mifid2-dr",
+   "name": "Commission Delegated Regulation (EU) 2017/565",
+   "celex": "32017R0565",
+   "source": "https://eur-lex.europa.eu/eli/reg_del/2017/565/oj/eng"
+  }
+ ],
+ "articles": [
+  {
+   "id": "mifid2-25-2",
+   "instrument": "mifid2",
+   "ref": "Article 25(2)",
+   "asks": "When providing investment advice or portfolio management, obtain the information needed on the client's knowledge and experience in the relevant investment field, financial situation including ability to bear losses, and investment objectives including risk tolerance, so as to recommend what is suitable."
+  },
+  {
+   "id": "mifid2-25-6",
+   "instrument": "mifid2",
+   "ref": "Article 25(6)",
+   "asks": "When providing investment advice, before the transaction is made, give the retail client a statement on suitability in a durable medium, specifying the advice given and how it meets the client's preferences, objectives and other characteristics."
+  },
+  {
+   "id": "mifid2-dr-54",
+   "instrument": "mifid2-dr",
+   "ref": "Article 54",
+   "asks": "How the suitability assessment is carried out, and what the suitability report must contain."
+  },
+  {
+   "id": "mifid2-dr-72-1",
+   "instrument": "mifid2-dr",
+   "ref": "Article 72(1)",
+   "asks": "Records are kept so the competent authority can access them readily and reconstitute each key stage, so any corrections or amendments and the contents before them can be easily ascertained, and so they cannot otherwise be manipulated or altered."
+  },
+  {
+   "id": "mifid2-16-7",
+   "instrument": "mifid2",
+   "ref": "Article 16(7)",
+   "asks": "Records include the recording of telephone conversations and electronic communications relating at least to transactions concluded when dealing on own account and to client order services, including those that do not result in a transaction; they are provided to the client on request and kept for five years and, where the competent authority requests it, up to seven years."
+  }
+ ],
+ "kinds": [
+  {
+   "kind": "mifid.suitability",
+   "title": "Suitability assessment",
+   "when": "When the information for the suitability assessment has been obtained and assessed, before advice is given.",
+   "fields": [
     {
-      "kind": "mifid.suitability",
-      "title": "Suitability assessment",
-      "when": "When the information for the suitability assessment has been obtained and assessed, before advice is given.",
-      "fields": [
-        { "name": "client_ref", "type": "reference", "required": true, "description": "Your own reference for the client. Never a name.", "evidences": ["mifid2-25-2"] },
-        { "name": "service", "type": "enum", "values": ["investment-advice", "portfolio-management"], "required": true, "description": "The service the assessment is for.", "evidences": ["mifid2-25-2"] },
-        { "name": "knowledge_and_experience", "type": "text", "required": true, "description": "The client's knowledge and experience in the investment field relevant to the product or service.", "evidences": ["mifid2-25-2", "mifid2-dr-54"] },
-        { "name": "financial_situation", "type": "text", "required": true, "description": "The client's financial situation, as obtained.", "evidences": ["mifid2-25-2", "mifid2-dr-54"] },
-        { "name": "ability_to_bear_losses", "type": "string", "max_length": 200, "required": true, "description": "Your assessment of the client's ability to bear losses.", "evidences": ["mifid2-25-2"] },
-        { "name": "investment_objectives", "type": "text", "required": true, "description": "The client's investment objectives.", "evidences": ["mifid2-25-2", "mifid2-dr-54"] },
-        { "name": "risk_tolerance", "type": "string", "max_length": 200, "required": true, "description": "The client's risk tolerance, in your own scale.", "evidences": ["mifid2-25-2"] },
-        { "name": "other_preferences", "type": "text", "required": false, "description": "Any other preference your assessment method records.", "evidences": ["mifid2-dr-54"] },
-        { "name": "method_ref", "type": "reference", "required": false, "description": "Your reference for the questionnaire or method version used.", "evidences": ["mifid2-dr-54"] },
-        { "name": "adviser_ref", "type": "reference", "required": false, "description": "Your reference for the adviser. Never a name.", "evidences": [] },
-        { "name": "assessed_at", "type": "timestamp", "required": true, "description": "When the assessment was completed, UTC.", "evidences": ["mifid2-25-2", "mifid2-dr-72-1"] }
-      ],
-      "example": {
-        "pack": "mifid2", "pack_version": 1, "kind": "mifid.suitability", "record_id": "suit-2026-004412",
-        "client_ref": "cl-30918", "service": "investment-advice",
-        "knowledge_and_experience": "Has held UCITS equity funds for eight years; no experience with derivatives or structured products.",
-        "financial_situation": "Regular employment income; savings covering twelve months of expenses outside the amount to invest.",
-        "ability_to_bear_losses": "Can bear a loss of up to 20 % of the amount invested.",
-        "investment_objectives": "Growth over ten years for retirement.",
-        "risk_tolerance": "4 on a scale of 1 to 7", "method_ref": "q-suit-v7", "adviser_ref": "adv-022",
-        "assessed_at": "2026-09-24T09:30:00Z"
-      }
+     "name": "client_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your own reference for the client. Never a name.",
+     "evidences": [
+      "mifid2-25-2"
+     ]
     },
     {
-      "kind": "mifid.suitability-statement",
-      "title": "Statement on suitability",
-      "when": "When the statement on suitability is given to the retail client, before the transaction is made.",
-      "fields": [
-        { "name": "client_ref", "type": "reference", "required": true, "description": "Your own reference for the client. Never a name.", "evidences": ["mifid2-25-6"] },
-        { "name": "assessment_record_id", "type": "reference", "required": true, "description": "The record_id of the mifid.suitability record the advice rests on.", "evidences": ["mifid2-25-6", "mifid2-dr-72-1"] },
-        { "name": "instruments", "type": "list", "items": { "type": "reference" }, "required": true, "description": "The instruments advised, by identifier such as ISIN.", "evidences": ["mifid2-25-6"] },
-        { "name": "advice", "type": "text", "required": true, "description": "The advice given.", "evidences": ["mifid2-25-6"] },
-        { "name": "how_it_meets_the_client", "type": "text", "required": true, "description": "How the advice meets the client's preferences, objectives and other characteristics.", "evidences": ["mifid2-25-6", "mifid2-dr-54"] },
-        { "name": "statement_digest", "type": "digest", "required": true, "description": "SHA-256 of the statement exactly as the client received it.", "evidences": ["mifid2-25-6"] },
-        { "name": "provided_at", "type": "timestamp", "required": true, "description": "When the statement was provided, UTC. The log's own time bounds it from above.", "evidences": ["mifid2-25-6"] },
-        { "name": "transaction_ref", "type": "reference", "required": false, "description": "Your reference for the transaction that followed, if any.", "evidences": ["mifid2-dr-72-1"] }
-      ],
-      "example": {
-        "pack": "mifid2", "pack_version": 1, "kind": "mifid.suitability-statement", "record_id": "stmt-2026-002970",
-        "client_ref": "cl-30918", "assessment_record_id": "suit-2026-004412", "instruments": ["LU0000000001", "IE0000000002"],
-        "advice": "Invest 60 % in a global equity index fund and 40 % in a euro government bond fund; review yearly.",
-        "how_it_meets_the_client": "Ten-year growth objective with a risk tolerance of 4 of 7; the bond share keeps the expected worst year within the losses the client can bear.",
-        "statement_digest": "5e4d3c2b1a0f9e8d7c6b5a4f3e2d1c0b9a8f7e6d5c4b3a291807f6e5d4c3b2a1",
-        "provided_at": "2026-09-24T10:05:00Z", "transaction_ref": "tx-778120"
-      }
+     "name": "service",
+     "type": "enum",
+     "values": [
+      "investment-advice",
+      "portfolio-management"
+     ],
+     "required": true,
+     "description": "The service the assessment is for.",
+     "evidences": [
+      "mifid2-25-2"
+     ]
+    },
+    {
+     "name": "knowledge_and_experience",
+     "type": "text",
+     "required": true,
+     "description": "The client's knowledge and experience in the investment field relevant to the product or service.",
+     "evidences": [
+      "mifid2-25-2",
+      "mifid2-dr-54"
+     ]
+    },
+    {
+     "name": "financial_situation",
+     "type": "text",
+     "required": true,
+     "description": "The client's financial situation, as obtained.",
+     "evidences": [
+      "mifid2-25-2",
+      "mifid2-dr-54"
+     ]
+    },
+    {
+     "name": "ability_to_bear_losses",
+     "type": "string",
+     "max_length": 200,
+     "required": true,
+     "description": "Your assessment of the client's ability to bear losses.",
+     "evidences": [
+      "mifid2-25-2"
+     ]
+    },
+    {
+     "name": "investment_objectives",
+     "type": "text",
+     "required": true,
+     "description": "The client's investment objectives.",
+     "evidences": [
+      "mifid2-25-2",
+      "mifid2-dr-54"
+     ]
+    },
+    {
+     "name": "risk_tolerance",
+     "type": "string",
+     "max_length": 200,
+     "required": true,
+     "description": "The client's risk tolerance, in your own scale.",
+     "evidences": [
+      "mifid2-25-2"
+     ]
+    },
+    {
+     "name": "other_preferences",
+     "type": "text",
+     "required": false,
+     "description": "Any other preference your assessment method records.",
+     "evidences": [
+      "mifid2-dr-54"
+     ]
+    },
+    {
+     "name": "method_ref",
+     "type": "reference",
+     "required": false,
+     "description": "Your reference for the questionnaire or method version used.",
+     "evidences": [
+      "mifid2-dr-54"
+     ]
+    },
+    {
+     "name": "adviser_ref",
+     "type": "reference",
+     "required": false,
+     "description": "Your reference for the adviser. Never a name.",
+     "evidences": []
+    },
+    {
+     "name": "assessed_at",
+     "type": "timestamp",
+     "required": true,
+     "description": "When the assessment was completed, UTC.",
+     "evidences": [
+      "mifid2-25-2",
+      "mifid2-dr-72-1"
+     ]
     }
-  ],
-  "retention": "This pack does not state how long to keep these records. Check the period that applies to you with your competent authority; in Belgium the FSMA supervises these conduct rules.",
-  "notes": "A correction is a new record whose supersedes field names the record it corrects; the earlier record stays in the log. That is how Article 72(1)'s requirement that corrections and earlier contents can be ascertained shows up in the evidence."
+   ],
+   "example": {
+    "pack": "mifid2",
+    "pack_version": 1,
+    "kind": "mifid.suitability",
+    "record_id": "suit-2026-004412",
+    "client_ref": "cl-30918",
+    "service": "investment-advice",
+    "knowledge_and_experience": "Has held UCITS equity funds for eight years; no experience with derivatives or structured products.",
+    "financial_situation": "Regular employment income; savings covering twelve months of expenses outside the amount to invest.",
+    "ability_to_bear_losses": "Can bear a loss of up to 20 % of the amount invested.",
+    "investment_objectives": "Growth over ten years for retirement.",
+    "risk_tolerance": "4 on a scale of 1 to 7",
+    "method_ref": "q-suit-v7",
+    "adviser_ref": "adv-022",
+    "assessed_at": "2026-09-24T09:30:00Z"
+   }
+  },
+  {
+   "kind": "mifid.suitability-statement",
+   "title": "Statement on suitability",
+   "when": "When the statement on suitability is given to the retail client, before the transaction is made.",
+   "fields": [
+    {
+     "name": "client_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your own reference for the client. Never a name.",
+     "evidences": [
+      "mifid2-25-6"
+     ]
+    },
+    {
+     "name": "assessment_record_id",
+     "type": "reference",
+     "required": true,
+     "description": "The record_id of the mifid.suitability record the advice rests on.",
+     "evidences": [
+      "mifid2-25-6",
+      "mifid2-dr-72-1"
+     ]
+    },
+    {
+     "name": "instruments",
+     "type": "list",
+     "items": {
+      "type": "reference"
+     },
+     "required": true,
+     "description": "The instruments advised, by identifier such as ISIN.",
+     "evidences": [
+      "mifid2-25-6"
+     ]
+    },
+    {
+     "name": "advice",
+     "type": "text",
+     "required": true,
+     "description": "The advice given.",
+     "evidences": [
+      "mifid2-25-6"
+     ]
+    },
+    {
+     "name": "how_it_meets_the_client",
+     "type": "text",
+     "required": true,
+     "description": "How the advice meets the client's preferences, objectives and other characteristics.",
+     "evidences": [
+      "mifid2-25-6",
+      "mifid2-dr-54"
+     ]
+    },
+    {
+     "name": "statement_digest",
+     "type": "digest",
+     "required": true,
+     "description": "SHA-256 of the statement exactly as the client received it.",
+     "evidences": [
+      "mifid2-25-6"
+     ]
+    },
+    {
+     "name": "provided_at",
+     "type": "timestamp",
+     "required": true,
+     "description": "When the statement was provided, UTC. The log's own time bounds it from above.",
+     "evidences": [
+      "mifid2-25-6"
+     ]
+    },
+    {
+     "name": "transaction_ref",
+     "type": "reference",
+     "required": false,
+     "description": "Your reference for the transaction that followed, if any.",
+     "evidences": [
+      "mifid2-dr-72-1"
+     ]
+    }
+   ],
+   "example": {
+    "pack": "mifid2",
+    "pack_version": 1,
+    "kind": "mifid.suitability-statement",
+    "record_id": "stmt-2026-002970",
+    "client_ref": "cl-30918",
+    "assessment_record_id": "suit-2026-004412",
+    "instruments": [
+     "LU0000000001",
+     "IE0000000002"
+    ],
+    "advice": "Invest 60 % in a global equity index fund and 40 % in a euro government bond fund; review yearly.",
+    "how_it_meets_the_client": "Ten-year growth objective with a risk tolerance of 4 of 7; the bond share keeps the expected worst year within the losses the client can bear.",
+    "statement_digest": "5e4d3c2b1a0f9e8d7c6b5a4f3e2d1c0b9a8f7e6d5c4b3a291807f6e5d4c3b2a1",
+    "provided_at": "2026-09-24T10:05:00Z",
+    "transaction_ref": "tx-778120"
+   }
+  },
+  {
+   "kind": "mifid.call-recording",
+   "title": "Conversation recorded",
+   "when": "When a recorded telephone conversation or electronic communication ends: the recording is sealed by its digest at once, so it can be shown to be unedited whenever the client or the supervisor asks for it.",
+   "fields": [
+    {
+     "name": "client_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your reference for the client, never a name.",
+     "evidences": [
+      "mifid2-16-7"
+     ]
+    },
+    {
+     "name": "channel",
+     "type": "enum",
+     "values": [
+      "telephone",
+      "video",
+      "chat",
+      "email",
+      "other"
+     ],
+     "required": true,
+     "description": "The kind of communication.",
+     "evidences": [
+      "mifid2-16-7"
+     ]
+    },
+    {
+     "name": "relates_to",
+     "type": "enum",
+     "values": [
+      "own-account-dealing",
+      "reception-transmission",
+      "execution",
+      "advice",
+      "other"
+     ],
+     "required": true,
+     "description": "What the communication relates to.",
+     "evidences": [
+      "mifid2-16-7"
+     ]
+    },
+    {
+     "name": "started_at",
+     "type": "timestamp",
+     "required": true,
+     "description": "When it started, UTC.",
+     "evidences": [
+      "mifid2-16-7"
+     ]
+    },
+    {
+     "name": "ended_at",
+     "type": "timestamp",
+     "required": true,
+     "description": "When it ended, UTC.",
+     "evidences": [
+      "mifid2-16-7"
+     ]
+    },
+    {
+     "name": "recording_digest",
+     "type": "digest",
+     "required": true,
+     "description": "SHA-256 of the recording file exactly as stored.",
+     "evidences": [
+      "mifid2-16-7",
+      "mifid2-dr-72-1"
+     ]
+    },
+    {
+     "name": "recording_format",
+     "type": "string",
+     "max_length": 40,
+     "required": false,
+     "description": "The file format, such as wav or opus.",
+     "evidences": [
+      "mifid2-16-7"
+     ]
+    },
+    {
+     "name": "order_refs",
+     "type": "list",
+     "items": {
+      "type": "reference"
+     },
+     "required": false,
+     "description": "Your references for the orders or transactions it concerns.",
+     "evidences": [
+      "mifid2-16-7"
+     ]
+    }
+   ],
+   "example": {
+    "pack": "mifid2",
+    "pack_version": 1,
+    "kind": "mifid.call-recording",
+    "record_id": "call-2026-10-07-4410",
+    "client_ref": "cl-30918",
+    "channel": "telephone",
+    "relates_to": "reception-transmission",
+    "started_at": "2026-10-07T09:31:02Z",
+    "ended_at": "2026-10-07T09:38:47Z",
+    "recording_digest": "7e9f1a3b5c7d9e1f3a5b7c9d1e3f5a7b9c1d3e5f7a9b1c3d5e7f9a1b3c5d7e9f",
+    "recording_format": "opus",
+    "order_refs": [
+     "ord-889120"
+    ]
+   }
+  }
+ ],
+ "retention": "Article 16(7) states five years for the recordings and communications it covers, and up to seven years where the competent authority requests it. For the other records this pack covers, check the period with your competent authority; in Belgium the FSMA supervises these conduct rules.",
+ "notes": "A correction is a new record whose supersedes field names the record it corrects; the earlier record stays in the log. That is how Article 72(1)'s requirement that corrections and earlier contents can be ascertained shows up in the evidence."
 }

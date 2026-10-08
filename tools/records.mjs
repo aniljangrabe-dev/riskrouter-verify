@@ -10,6 +10,8 @@
  *   node records.mjs explain  record.json                    which articles each field is mapped to
  *   node records.mjs bundle   record.json --salt <hex> --proof proof.json   > bundle.json
  *   node records.mjs check    bundle.json [--key <key file or directory>]
+ *   node records.mjs seal-fields record.json [--secret <hex>] [--salt <hex>]   seal one commitment per field
+ *   node records.mjs disclose record.json --secret <hex> --salt <hex> --proof proof.json --fields a,b   > disclosure.json
  *
  *   --packs <dir>   where the pack files are (default: ./packs beside this file, then ../packs)
  *
@@ -131,7 +133,11 @@ export const COMMON_FIELDS = [
   { name: 'pack_version', type: 'integer', required: true, description: 'The pack version.' },
   { name: 'kind', type: 'string', required: true, description: 'The kind; the same tag sent to the log.' },
   { name: 'record_id', type: 'reference', required: true, description: 'Your own id for this record.' },
-  { name: 'supersedes', type: 'reference', required: false, description: 'The record_id of an earlier record this one corrects. The earlier record stays.' }
+  { name: 'supersedes', type: 'reference', required: false, description: 'The record_id of an earlier record this one corrects. The earlier record stays.' },
+  // Completeness chains (docs/completeness.md): all three or none.
+  { name: 'chain_tag', type: 'digest', required: false, description: 'The chain this record belongs to: 64 hex characters derived from a secret you keep, sent to the log beside the digest.' },
+  { name: 'chain_seq', type: 'integer', min: 1, required: false, description: 'This record\'s position in its chain, from 1, sent to the log beside the digest.' },
+  { name: 'chain_prev', type: 'digest', required: false, description: 'The record_digest of the record before it in the chain; 64 zeros for position 1.' }
 ];
 
 const REFERENCE = /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$/;
@@ -205,6 +211,8 @@ export function validateRecord(record, packs = loadPacks()) {
     const p = fieldProblem(f, record[f.name]);
     if (p) errors.push(`${f.name} ${p}`);
   }
+  const chained = ['chain_tag', 'chain_seq', 'chain_prev'].filter((n) => n in record).length;
+  if (chained !== 0 && chained !== 3) errors.push('chain_tag, chain_seq and chain_prev go together, or none of them');
   const known = new Set(fields.map((f) => f.name));
   for (const k of Object.keys(record)) {
     if (!known.has(k) && !k.startsWith('x_')) errors.push(`${k} is not a field of ${kind.kind}; your own fields start with x_`);
@@ -277,6 +285,87 @@ export function checkBundleRecord(bundle, packs = loadPacks()) {
   return lines;
 }
 
+/* ---------------------------------------------------- selective disclosure */
+
+/**
+ * docs/selective-disclosure.md, settled 7 October 2026 with the repository
+ * owner's decision. A firm seals a commitment record instead of the record:
+ * one salted commitment per top-level field. Later it can show what one field
+ * said, and prove it is the field sealed, without revealing the others.
+ *
+ *   field salt     HMAC-SHA256(secret, UTF-8("riskrouter-disclosable|1|" || name)), 32 bytes
+ *   commitment     SHA-256(field salt || UTF-8(canonical({name: value})))
+ *   sealed record  {"format": "riskrouter-disclosable|1", "kind": <the record's kind>, "fields": {name: commitment, ...}}
+ *   record_digest  SHA-256(salt || UTF-8(canonical(sealed record))), exactly as for any record
+ *
+ * The secret never leaves the firm: each disclosure carries only the salts of
+ * the fields it reveals, so a hidden field cannot be guessed from what is
+ * shown. Field names are visible in the sealed record; values are not.
+ * All of it is frozen from the first published vectors.
+ */
+export const DISCLOSABLE_FORMAT = 'riskrouter-disclosable|1';
+export const DISCLOSURE_BUNDLE_FORMAT = 'riskrouter-disclosure-bundle|1';
+
+export function fieldSalt(secretHex, name) {
+  if (typeof secretHex !== 'string' || !SALT.test(secretHex)) {
+    throw new RecordError('the disclosure secret is 16 to 64 bytes written as lowercase hex');
+  }
+  if (!RECORD_KEY.test(name)) throw new RecordError(`field ${JSON.stringify(name)} is not a record key`);
+  return crypto.createHmac('sha256', Buffer.from(secretHex, 'hex')).update(`${DISCLOSABLE_FORMAT}|${name}`, 'utf8').digest('hex');
+}
+
+export function fieldCommitment(fieldSaltHex, name, value) {
+  if (typeof fieldSaltHex !== 'string' || !/^[0-9a-f]{64}$/.test(fieldSaltHex)) throw new RecordError('a field salt is 32 bytes of lowercase hex');
+  return crypto.createHash('sha256')
+    .update(Buffer.concat([Buffer.from(fieldSaltHex, 'hex'), Buffer.from(canonicalRecord({ [name]: value }), 'utf8')]))
+    .digest('hex');
+}
+
+/** The commitment record to seal in place of `record`: send recordDigest(salt, sealed) and its kind. */
+export function sealedRecord(record, secretHex) {
+  canonicalRecord(record);
+  const fields = {};
+  for (const name of Object.keys(record).sort()) fields[name] = fieldCommitment(fieldSalt(secretHex, name), name, record[name]);
+  const sealed = { format: DISCLOSABLE_FORMAT, fields };
+  if (typeof record.kind === 'string') sealed.kind = record.kind;
+  return sealed;
+}
+
+/** A disclosure of the named fields: the sealed record, its salt, the log's proof, and each named field with its own salt. */
+export function makeDisclosure(record, secretHex, saltHex, proof, names) {
+  const disclosed = {};
+  for (const name of names) {
+    if (!(name in record)) throw new RecordError(`the record has no field ${JSON.stringify(name)}`);
+    disclosed[name] = { value: record[name], field_salt_hex: fieldSalt(secretHex, name) };
+  }
+  return { format: DISCLOSURE_BUNDLE_FORMAT, record: sealedRecord(record, secretHex), salt_hex: saltHex, proof, disclosed };
+}
+
+/** The record half of a disclosure: the sealed record's digest, its shape, and every disclosed field against its commitment. */
+export function checkDisclosure(bundle) {
+  const lines = [];
+  const sealed = bundle?.record;
+  const shapeOk = isObject(sealed) && sealed.format === DISCLOSABLE_FORMAT && isObject(sealed.fields) &&
+    Object.keys(sealed).every((k) => ['format', 'kind', 'fields'].includes(k)) &&
+    Object.entries(sealed.fields).every(([k, c]) => RECORD_KEY.test(k) && typeof c === 'string' && DIGEST.test(c));
+  if (!shapeOk) return [{ failed: `disclosure: the sealed record is not a ${DISCLOSABLE_FORMAT} commitment record` }];
+  for (const l of checkBundleRecord({ ...bundle, record: sealed })) lines.push(l);
+  const disclosed = isObject(bundle.disclosed) ? bundle.disclosed : {};
+  const names = Object.keys(disclosed);
+  if (names.length === 0) lines.push({ failed: 'disclosure: discloses no field' });
+  for (const name of names) {
+    const d = disclosed[name];
+    let c = null;
+    try { c = fieldCommitment(d?.field_salt_hex, name, d?.value); } catch (e) { lines.push({ failed: `disclosure: ${name}: ${e.message}` }); continue; }
+    lines.push(sealed.fields[name] === undefined ? { failed: `disclosure: ${name} is not a field of the sealed record` }
+      : c === sealed.fields[name] ? { ok: `disclosure: ${name} = ${JSON.stringify(d.value).slice(0, 80)} is the value sealed` }
+        : { failed: `disclosure: ${name}: the value and its salt do not produce the sealed commitment; this is not what was sealed` });
+  }
+  const hidden = Object.keys(sealed.fields).filter((n) => !names.includes(n));
+  if (hidden.length) lines.push({ ok: `disclosure: ${hidden.length} other field${hidden.length === 1 ? '' : 's'} stay sealed (${hidden.join(', ')})` });
+  return lines;
+}
+
 /* -------------------------------------------------------------------- cli */
 
 function opt(args, name) {
@@ -292,13 +381,16 @@ async function main() {
   const [mode, ...argv] = process.argv.slice(2);
   const packsOpt = opt(argv, '--packs'); const saltOpt = opt(packsOpt.rest, '--salt');
   const proofOpt = opt(saltOpt.rest, '--proof'); const keyOpt = opt(proofOpt.rest, '--key');
-  const [file] = keyOpt.rest;
+  const secretOpt = opt(keyOpt.rest, '--secret'); const fieldsOpt = opt(secretOpt.rest, '--fields');
+  const [file] = fieldsOpt.rest;
   const packs = loadPacks(packsDir(packsOpt.value));
   const read = (f) => JSON.parse(fs.readFileSync(f, 'utf8'));
   const out = (doc) => process.stdout.write(JSON.stringify(doc, null, 2) + '\n');
   const usage = () => {
     console.error('usage: node records.mjs packs | validate <record.json> | digest <record.json> [--salt hex] | explain <record.json>\n' +
-      '                       | bundle <record.json> --salt <hex> --proof <proof.json> | check <bundle.json> [--key <file|dir>]   [--packs <dir>]');
+      '                       | bundle <record.json> --salt <hex> --proof <proof.json> | check <bundle.json> [--key <file|dir>]\n' +
+      '                       | seal-fields <record.json> [--secret hex] [--salt hex]\n' +
+      '                       | disclose <record.json> --secret <hex> --salt <hex> --proof <proof.json> --fields a,b   [--packs <dir>]');
     process.exit(2);
   };
   try {
@@ -329,6 +421,21 @@ async function main() {
       if (!file || !saltOpt.value || !proofOpt.value) usage();
       const bundle = makeBundle(read(file), saltOpt.value, read(proofOpt.value));
       const lines = checkBundleRecord(bundle, packs);
+      for (const l of lines) console.error(l.ok ? `OK    ${l.ok}` : l.failed ? `FAIL  ${l.failed}` : `SKIP  ${l.skipped}`);
+      if (lines.some((l) => l.failed)) process.exit(1);
+      out(bundle);
+    } else if (mode === 'seal-fields') {
+      if (!file) usage();
+      const record = read(file);
+      const secret = secretOpt.value || newSalt(32);
+      const salt = saltOpt.value || newSalt();
+      const sealed = sealedRecord(record, secret);
+      out({ kind: sealed.kind ?? null, salt_hex: salt, secret_hex: secret, record_digest: recordDigest(salt, sealed), sealed_record: sealed,
+        keep: 'Keep the record, the salt and the secret, and never share the secret. Send only record_digest and kind to POST /api/v2/evidence.' });
+    } else if (mode === 'disclose') {
+      if (!file || !secretOpt.value || !saltOpt.value || !proofOpt.value || !fieldsOpt.value) usage();
+      const bundle = makeDisclosure(read(file), secretOpt.value, saltOpt.value, read(proofOpt.value), fieldsOpt.value.split(',').map((s) => s.trim()).filter(Boolean));
+      const lines = checkDisclosure(bundle);
       for (const l of lines) console.error(l.ok ? `OK    ${l.ok}` : l.failed ? `FAIL  ${l.failed}` : `SKIP  ${l.skipped}`);
       if (lines.some((l) => l.failed)) process.exit(1);
       out(bundle);

@@ -1,0 +1,226 @@
+{
+ "format": "riskrouter-regime-pack|1",
+ "id": "ccd",
+ "version": 1,
+ "title": "Consumer credit: the creditworthiness assessment and the right to human intervention",
+ "regime": "Consumer Credit Directive",
+ "summary": "What a creditor records so it can show that a thorough creditworthiness assessment was made before the credit agreement, on which data and with which model, and that a consumer who asked for human intervention, an explanation or a review got one.",
+ "instruments": [
+  {
+   "id": "ccd",
+   "name": "Directive (EU) 2023/2225 (Consumer Credit Directive)",
+   "celex": "32023L2225",
+   "source": "https://eur-lex.europa.eu/eli/dir/2023/2225/oj/eng"
+  }
+ ],
+ "articles": [
+  {
+   "id": "ccd-18-1",
+   "instrument": "ccd",
+   "ref": "Article 18(1)",
+   "asks": "Before concluding a credit agreement, the creditor carries out a thorough assessment of the consumer's creditworthiness, in the consumer's interest, to prevent irresponsible lending practices and over-indebtedness."
+  },
+  {
+   "id": "ccd-18-8",
+   "instrument": "ccd",
+   "ref": "Article 18(8)",
+   "asks": "Where the assessment involves automated processing of personal data, the consumer has the right to request and obtain human intervention on the part of the creditor, an explanation of the assessment, and to express their point of view and request a review of the assessment and of the decision."
+  }
+ ],
+ "kinds": [
+  {
+   "kind": "credit.creditworthiness-assessment",
+   "title": "Creditworthiness assessed",
+   "when": "When the assessment is made, before the agreement is concluded: the inputs and the model are sealed by their digests, so the assessment can be shown to have come first.",
+   "fields": [
+    {
+     "name": "application_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your reference for the credit application.",
+     "evidences": [
+      "ccd-18-1"
+     ]
+    },
+    {
+     "name": "assessed_at",
+     "type": "timestamp",
+     "required": true,
+     "description": "When the assessment was made, UTC.",
+     "evidences": [
+      "ccd-18-1"
+     ]
+    },
+    {
+     "name": "inputs_digest",
+     "type": "digest",
+     "required": true,
+     "description": "SHA-256 of the data the assessment used, exactly as used (for example, a manifest of the documents and figures).",
+     "evidences": [
+      "ccd-18-1"
+     ]
+    },
+    {
+     "name": "model_version_digest",
+     "type": "digest",
+     "required": false,
+     "description": "SHA-256 of the scoring model or rule set used, if one was.",
+     "evidences": [
+      "ccd-18-1",
+      "ccd-18-8"
+     ]
+    },
+    {
+     "name": "automated",
+     "type": "boolean",
+     "required": true,
+     "description": "Whether the assessment involved automated processing of personal data.",
+     "evidences": [
+      "ccd-18-8"
+     ]
+    },
+    {
+     "name": "outcome",
+     "type": "enum",
+     "values": [
+      "positive",
+      "negative",
+      "referred"
+     ],
+     "required": true,
+     "description": "The result of the assessment.",
+     "evidences": [
+      "ccd-18-1"
+     ]
+    },
+    {
+     "name": "assessor_ref",
+     "type": "reference",
+     "required": false,
+     "description": "Your reference for the person who made or approved the assessment, if a person did.",
+     "evidences": [
+      "ccd-18-1"
+     ]
+    }
+   ],
+   "example": {
+    "pack": "ccd",
+    "pack_version": 1,
+    "kind": "credit.creditworthiness-assessment",
+    "record_id": "cwa-2026-55120",
+    "application_ref": "app-55120",
+    "assessed_at": "2026-11-23T10:41:00Z",
+    "inputs_digest": "1c9e2f4a6b8d0e2f4a6c8e0b2d4f6a8c0e2b4d6f8a0c2e4b6d8f0a2c4e6b8d0f",
+    "model_version_digest": "7a2b4c6d8e0f1a3b5c7d9e1f3a5b7c9d1e3f5a7b9c1d3e5f7a9b1c3d5e7f9a1b",
+    "automated": true,
+    "outcome": "negative"
+   }
+  },
+  {
+   "kind": "credit.human-intervention",
+   "title": "Human intervention, explanation or review given",
+   "when": "Each time a consumer asks for human intervention, an explanation or a review of an automated assessment, and when it is given.",
+   "fields": [
+    {
+     "name": "application_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your reference for the credit application.",
+     "evidences": [
+      "ccd-18-8"
+     ]
+    },
+    {
+     "name": "assessment_record_id",
+     "type": "reference",
+     "required": true,
+     "description": "The record_id of the assessment concerned.",
+     "evidences": [
+      "ccd-18-8"
+     ]
+    },
+    {
+     "name": "requested",
+     "type": "list",
+     "items": {
+      "type": "enum",
+      "values": [
+       "human-intervention",
+       "explanation",
+       "review"
+      ]
+     },
+     "required": true,
+     "description": "What the consumer asked for.",
+     "evidences": [
+      "ccd-18-8"
+     ]
+    },
+    {
+     "name": "requested_at",
+     "type": "timestamp",
+     "required": true,
+     "description": "When the consumer asked, UTC.",
+     "evidences": [
+      "ccd-18-8"
+     ]
+    },
+    {
+     "name": "answered_at",
+     "type": "timestamp",
+     "required": true,
+     "description": "When it was given, UTC.",
+     "evidences": [
+      "ccd-18-8"
+     ]
+    },
+    {
+     "name": "reviewer_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your reference for the person who intervened or reviewed.",
+     "evidences": [
+      "ccd-18-8"
+     ]
+    },
+    {
+     "name": "decision_changed",
+     "type": "boolean",
+     "required": true,
+     "description": "Whether the review changed the decision.",
+     "evidences": [
+      "ccd-18-8"
+     ]
+    },
+    {
+     "name": "explanation_digest",
+     "type": "digest",
+     "required": false,
+     "description": "SHA-256 of the explanation given, exactly as given.",
+     "evidences": [
+      "ccd-18-8"
+     ]
+    }
+   ],
+   "example": {
+    "pack": "ccd",
+    "pack_version": 1,
+    "kind": "credit.human-intervention",
+    "record_id": "hi-2026-0311",
+    "application_ref": "app-55120",
+    "assessment_record_id": "cwa-2026-55120",
+    "requested": [
+     "human-intervention",
+     "explanation"
+    ],
+    "requested_at": "2026-11-24T08:02:00Z",
+    "answered_at": "2026-11-26T14:30:00Z",
+    "reviewer_ref": "credit-officer-14",
+    "decision_changed": false,
+    "explanation_digest": "5e7f9a1b3c5d7e9f1a3b5c7d9e1f3a5b7c9d1e3f5a7b9c1d3e5f7a9b1c3d5e7f"
+   }
+  }
+ ],
+ "retention": "Article 18 does not state how long to keep these records, and this pack does not decide it for you. The directive applies from 20 November 2026 as transposed in each Member State; check your national law.",
+ "notes": "Mortgage credit is outside this directive. Where the assessment uses a high-risk AI system, the AI Act pack covers its logs; where a decision is based solely on automated processing, the GDPR Article 22 pack covers the safeguards that apply."
+}
