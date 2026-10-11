@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Anil Jangra
 /**
  * The witness as a command, storing its state in a directory. witness/README.md.
  *

@@ -39,6 +39,12 @@
    "asks": "How the suitability assessment is carried out, and what the suitability report must contain."
   },
   {
+   "id": "mifid2-dr-54-10",
+   "instrument": "mifid2-dr",
+   "ref": "Article 54(10), second and third subparagraphs",
+   "asks": "A firm does not recommend or trade financial instruments as meeting a client's sustainability preferences when they do not meet them; it explains the reasons to the client and keeps records of those reasons. Where no financial instrument meets the client's sustainability preferences and the client decides to adapt them, the firm keeps records of the client's decision, including the reasons for it."
+  },
+  {
    "id": "mifid2-dr-72-1",
    "instrument": "mifid2-dr",
    "ref": "Article 72(1)",
@@ -395,6 +401,101 @@
     "order_refs": [
      "ord-889120"
     ]
+   }
+  },
+  {
+   "kind": "mifid.sustainability-reasons",
+   "title": "Sustainability preferences not met",
+   "when": "When no financial instrument meets the sustainability preferences the client stated: when you explain why you do not recommend one as meeting them, or when the client decides to adapt them.",
+   "fields": [
+    {
+     "name": "client_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your own reference for the client. Never a name.",
+     "evidences": [
+      "mifid2-dr-54-10"
+     ]
+    },
+    {
+     "name": "assessment_record_id",
+     "type": "reference",
+     "required": true,
+     "description": "The record_id of the mifid.suitability record in which the preferences were stated.",
+     "evidences": [
+      "mifid2-dr-54-10"
+     ]
+    },
+    {
+     "name": "situation",
+     "type": "enum",
+     "values": [
+      "not-recommended-as-meeting",
+      "client-adapted-preferences"
+     ],
+     "required": true,
+     "description": "Which record this is: the reasons for not recommending an instrument as meeting the client's sustainability preferences, or the client's decision to adapt them.",
+     "evidences": [
+      "mifid2-dr-54-10"
+     ]
+    },
+    {
+     "name": "reasons",
+     "type": "text",
+     "required": true,
+     "description": "The reasons explained to the client, or the reasons for the client's decision.",
+     "evidences": [
+      "mifid2-dr-54-10"
+     ]
+    },
+    {
+     "name": "preferences_stated",
+     "type": "text",
+     "required": false,
+     "description": "The sustainability preferences as the client stated them.",
+     "evidences": [
+      "mifid2-dr-54-10"
+     ]
+    },
+    {
+     "name": "preferences_adapted",
+     "type": "text",
+     "required": false,
+     "description": "The preferences as the client adapted them, when they did.",
+     "evidences": [
+      "mifid2-dr-54-10"
+     ]
+    },
+    {
+     "name": "adviser_ref",
+     "type": "reference",
+     "required": false,
+     "description": "Your reference for the adviser. Never a name.",
+     "evidences": []
+    },
+    {
+     "name": "recorded_at",
+     "type": "timestamp",
+     "required": true,
+     "description": "When the explanation or the client's decision was recorded, UTC.",
+     "evidences": [
+      "mifid2-dr-54-10"
+     ]
+    }
+   ],
+   "example": {
+    "pack": "mifid2",
+    "pack_version": 1,
+    "kind": "mifid.sustainability-reasons",
+    "record_id": "sust-2026-000318",
+    "client_ref": "cl-30918",
+    "assessment_record_id": "suit-2026-004412",
+    "situation": "client-adapted-preferences",
+    "reasons": "No fund in the range meets the stated minimum share of sustainable investments for a ten-year equity mandate; the client chose to lower it rather than wait for a new fund.",
+    "preferences_stated": "At least 50 % sustainable investments; considers principal adverse impacts on climate.",
+    "preferences_adapted": "At least 30 % sustainable investments; considers principal adverse impacts on climate.",
+    "adviser_ref": "adv-022",
+    "recorded_at": "2026-10-12T10:05:00Z"
    }
   }
  ],

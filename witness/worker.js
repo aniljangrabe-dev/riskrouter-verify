@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Anil Jangra
 /**
  * The witness as a Cloudflare Worker, run on the WITNESS's own account with a
  * key the witness generated. docs/witness-network.md, witness/README.md.

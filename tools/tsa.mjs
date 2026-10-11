@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Anil Jangra
 /**
  * RFC 3161 time-stamp tokens on our signed heads. Design: docs/legal-time.md.
  *

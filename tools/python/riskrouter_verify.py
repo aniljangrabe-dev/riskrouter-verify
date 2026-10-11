@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Anil Jangra
 """
 riskrouter_verify.py: an independent verifier for RiskRouter evidence.
 

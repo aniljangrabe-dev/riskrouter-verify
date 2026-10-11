@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Anil Jangra
 /**
  * The v2 evidence log's Merkle tree: RFC 6962 / RFC 9162 (Certificate
  * Transparency), unchanged, so any existing CT tooling can check it.

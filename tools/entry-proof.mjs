@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Anil Jangra
 /**
  * Cut a single-entry proof out of a ledger export.
  *

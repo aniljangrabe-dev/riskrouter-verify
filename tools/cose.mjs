@@ -1,13 +1,15 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Anil Jangra
 /**
  * SCITT on the v2 evidence log: Signed Statements in, COSE Receipts out.
  * docs/scitt.md.
  *
- *   IETF SCITT architecture (draft-ietf-scitt-architecture): Signed Statement,
+ *   IETF SCITT architecture (RFC 9943): Signed Statement,
  *     Receipt, Transparent Statement (receipts in unprotected header 394).
  *   RFC 9942 (COSE Receipts): vds 395 = 1 (RFC9162_SHA256), vdp 396 with
  *     inclusion proofs at -1: bstr .cbor [tree_size, leaf_index, [path...]],
  *     detached payload = the Merkle root.
- *   draft-ietf-cose-hash-envelope: payload = hash of the artifact, protected
+ *   COSE Hash Envelope (RFC 9995): payload = hash of the artifact, protected
  *     258 (payload hash alg) = -16 (SHA-256).
  *
  * Our registration policy, frozen as riskrouter-scitt-profile|1:

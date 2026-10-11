@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Anil Jangra
 /**
  * Records for the evidence log: one canonical form, a salted digest, the
  * regime packs that say what to put in a record, and the bundle a firm hands

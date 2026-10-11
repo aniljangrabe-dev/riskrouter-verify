@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Anil Jangra
 /**
  * Every signing key we have ever published, chosen by the key id a signature names.
  *

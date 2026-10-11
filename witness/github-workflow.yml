@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Anil Jangra
 # A witness that runs in GitHub Actions, in YOUR fork of
 # https://github.com/aniljangrabe-dev/riskrouter-verify. witness/README.md.
 #

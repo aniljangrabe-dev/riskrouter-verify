@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Anil Jangra
 # A RiskRouter-compatible witness on your own Cloudflare account. witness/README.md.
 #
 #   cp witness/wrangler.toml.example witness/wrangler.toml

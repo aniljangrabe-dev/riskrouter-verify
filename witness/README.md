@@ -76,3 +76,8 @@ never point a witness at a private address; only you can configure one.
 
 That you saw that head and checked it was consistent with every head you saw before. Nothing about
 the records behind it, and nothing about the time after your witness stops running.
+
+## Licence
+
+Apache-2.0 (`LICENSE` at the root of the verifier repository; `LICENSES/Apache-2.0.txt` in RiskRouter's own). You may run, change
+and redistribute this witness, as a witness is meant to be run by someone other than us.

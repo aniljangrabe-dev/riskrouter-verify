@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Anil Jangra
 /**
  * The conformance suite: does an implementation of the RiskRouter evidence
  * formats produce the same bytes the specification does?

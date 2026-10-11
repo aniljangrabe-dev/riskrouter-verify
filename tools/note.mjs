@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Anil Jangra
 /**
  * The C2SP transparency-log formats the public witness network speaks.
  * docs/transparency-log.md.

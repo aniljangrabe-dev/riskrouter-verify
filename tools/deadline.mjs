@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Anil Jangra
 /**
  * Was it reported in time? Deadline proofs from sealed reports.
  * docs/deadline-proofs.md.

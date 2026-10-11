@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Anil Jangra
 /**
  * Completeness chains and spot checks: is this all of it, and was it kept?
  * Design and reasoning: docs/completeness.md and docs/spot-checks.md.
