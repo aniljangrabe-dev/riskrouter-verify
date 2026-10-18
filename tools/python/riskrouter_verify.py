@@ -30,6 +30,7 @@ FILE may be any of:
     a spot-check bundle             riskrouter-spot-check-bundle|1       (the records a Bitcoin block hash selected)
     a co-sealed record              riskrouter-coseal|1                  (the same record, signed by two parties)
     an RFC 3161 head timestamp      riskrouter-head-timestamp|1          (--key checks our signature on the head too)
+    a head anchored in Bitcoin      evidence-head-N.payload.CALENDAR.ots (binary; its payload file beside it)
     a list of v1 ledger rows
     a C2SP checkpoint (signed note)  c2sp.org/tlog-checkpoint           (needs --vkey; --witness-vkey, repeatable)
     a SCITT COSE Receipt, or a Transparent Statement carrying ours (binary; needs --key; --statement optional)
@@ -1612,6 +1613,95 @@ def _checkpoint_main(path, argv):
     return 1 if failed else 0
 
 
+# ------------------------------------------------- heads anchored in Bitcoin
+# anchors/ots/evidence-head-N.payload holds a v2 head's frozen payload, UTF-8,
+# and nothing else; each evidence-head-N.payload.CALENDAR.ots beside it is an
+# OpenTimestamps proof that starts from its SHA-256, the imprint the RFC 3161
+# tokens carry. Checked here without a Bitcoin node: the payload, the binding,
+# and the proof's state. `ots verify` checks the block header itself.
+
+OTS_MAGIC = bytes.fromhex("004f70656e54696d657374616d7073000050726f6f6600bf89e2e884e89294")
+OTS_PENDING = bytes.fromhex("83dfe30d2ef90c8e")
+OTS_BITCOIN = bytes.fromhex("0588960d73d71901")
+HEAD_PAYLOAD_RE = re.compile(r"^riskrouter-evidence-head\|v2\|(0|[1-9][0-9]*)\|([0-9a-f]{64})\|"
+                             r"([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]{1,6})?Z)$")
+
+
+def _ots_states(proof):
+    """(pending count, block heights) from the attestation tags the format fixes."""
+    pending, blocks, at = proof.count(OTS_PENDING), [], proof.find(OTS_BITCOIN)
+    while at != -1:
+        i = at + len(OTS_BITCOIN)
+        values = []
+        for _ in range(2):           # payload length, then the block height, each a varuint
+            v, shift = 0, 0
+            while True:
+                b = proof[i]
+                i += 1
+                v += (b & 0x7f) << shift
+                shift += 7
+                if not b & 0x80:
+                    break
+            values.append(v)
+        blocks.append(values[1])
+        at = proof.find(OTS_BITCOIN, at + 1)
+    return pending, blocks
+
+
+def verify_head_anchor(payload, proof, calendar="the calendar"):
+    """[(ok, line), ...]; ok None is a note. The verdicts tools/head-anchor.mjs gives."""
+    try:
+        text = payload.decode("utf-8")
+    except UnicodeDecodeError:
+        text = ""
+    m = HEAD_PAYLOAD_RE.match(text) if text and not text.endswith("\n") else None
+    if not m:
+        return [(False, "the anchored file is not exactly one evidence-head payload")]
+    out = [(True, "the anchored file is the head payload for tree size %s, root %s, signed for %s" % (m.group(1), m.group(2), m.group(3)))]
+    if len(proof) < len(OTS_MAGIC) + 34:
+        return out + [(False, "too short to be an OpenTimestamps proof")]
+    if proof[:len(OTS_MAGIC)] != OTS_MAGIC:
+        return out + [(False, "not an OpenTimestamps proof (header magic)")]
+    if proof[len(OTS_MAGIC)] != 0x01:
+        return out + [(False, "unknown proof version %d" % proof[len(OTS_MAGIC)])]
+    if proof[len(OTS_MAGIC) + 1] != 0x08:
+        return out + [(False, "the proof does not start from a SHA-256 digest")]
+    committed = proof[len(OTS_MAGIC) + 2:len(OTS_MAGIC) + 34].hex()
+    want = sha256_hex(payload)
+    if committed != want:
+        return out + [(False, "the proof commits to %s, not to this payload (%s)" % (committed, want))]
+    out.append((True, "the proof commits to the SHA-256 of that payload, the same imprint the RFC 3161 tokens carry"))
+    pending, blocks = _ots_states(proof)
+    if blocks:
+        out.append((True, "the proof carries a Bitcoin attestation: block %s" % ", ".join(str(b) for b in blocks)))
+        out.append((None, "that the block header really carries the committed root is what the standard client checks: ots verify <proof> <payload>"))
+    elif pending:
+        out.append((None, "submitted to %s, not yet in a Bitcoin block; it becomes one after the next upgrade" % calendar))
+    else:
+        out.append((False, "the proof carries no attestation at all"))
+    return out
+
+
+def _ots_main(path):
+    m = re.match(r"^(evidence-head-[0-9]+\.payload)\.([a-z0-9-]+)\.ots$", os.path.basename(path))
+    if not m:
+        print("FAIL  not named <evidence-head-N.payload>.<calendar>.ots, so its payload cannot be found")
+        return 1
+    target = os.path.join(os.path.dirname(path), m.group(1))
+    if not os.path.exists(target):
+        print("FAIL  %s is missing" % target)
+        return 1
+    with open(target, "rb") as fh:
+        payload = fh.read()
+    with open(path, "rb") as fh:
+        proof = fh.read()
+    failed = False
+    for ok, line in verify_head_anchor(payload, proof, m.group(2)):
+        print(("NOTE  " if ok is None else "OK    " if ok else "FAIL  ") + line)
+        failed = failed or ok is False
+    return 1 if failed else 0
+
+
 def main(argv):
     if "--self-test" in argv:
         self_test()
@@ -1622,8 +1712,11 @@ def main(argv):
         print(__doc__.strip(), file=sys.stderr)
         return 2
     with open(files[0], "rb") as fh:
-        if fh.read(1) == b"\xd2":        # a tagged COSE_Sign1: a receipt or a Transparent Statement
-            return _cose_main(files[0], argv)
+        first = fh.read(len(OTS_MAGIC))
+    if first[:1] == b"\xd2":            # a tagged COSE_Sign1: a receipt or a Transparent Statement
+        return _cose_main(files[0], argv)
+    if first == OTS_MAGIC:               # an OpenTimestamps proof of an anchored head
+        return _ots_main(files[0])
     with open(files[0], "r", encoding="utf-8") as fh:
         head = fh.read(4096)
     if not head.lstrip().startswith(("{", "[")) and "\n\n\u2014 " in open(files[0], "r", encoding="utf-8").read():
