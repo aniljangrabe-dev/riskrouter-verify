@@ -27,7 +27,7 @@
  *          2 an alarm: our own log contradicted a checkpoint we saved, or a
  *          witness holds a larger tree than we serve.
  *
- * Operator tooling under rule 1: push runs from .github/workflows/checkpoint.yml
+ * Operator tooling under rule 1: push runs from .github/workflows/timestamp.yml
  * on a schedule; no request to our API can cause it to run.
  */
 import fs from 'node:fs';
