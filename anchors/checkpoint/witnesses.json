@@ -1,4 +1,29 @@
 {
   "about": "The C2SP witnesses our checkpoints are posted to (c2sp.org/tlog-witness), by tools/checkpoint.mjs push, hourly. Each entry is copied from that witness's own about page, only after the witness network has accepted this log: name, vkey (type 0x04), url (the add-checkpoint URL) and about (where the vkey was read). docs/transparency-log.md.",
-  "witnesses": []
+  "witnesses": [
+    {
+      "name": "witness.gdbsecurity.com",
+      "vkey": "witness.gdbsecurity.com+a1398f73+BAbIijGonVIk3ikDac+KKlSm1ELHOzcddhjjB6zB4BNf",
+      "url": "https://witness.gdbsecurity.com/add-checkpoint",
+      "about": "https://witness.gdbsecurity.com/about"
+    },
+    {
+      "name": "markovianprotocol.com/witness",
+      "vkey": "markovianprotocol.com/witness+41b8827f+BJKLl8rBYM0oUxSaWh9rjTldTprEpYj/SWVIGgacA9XC",
+      "url": "https://witness.markovianprotocol.com/add-checkpoint",
+      "about": "https://witness.markovianprotocol.com/about"
+    },
+    {
+      "name": "witness.stagemole.eu",
+      "vkey": "witness.stagemole.eu+67f7aea0+BEqSG3yu9YrmcM3BHvQYTxwFj3uSWakQepafafpUqklv",
+      "url": "https://witness.stagemole.eu/add-checkpoint",
+      "about": "https://witness.stagemole.eu/about"
+    },
+    {
+      "name": "staging.witness.transparency.goog/ring-any-bells",
+      "vkey": "staging.witness.transparency.goog/ring-any-bells+2e1a8dc9+BG5JTpLc3FJtwzgh1Uv+Qelz9qeOH2bfWjS1s0s+y4rL",
+      "url": "https://staging.witness.transparency.goog/ring-any-bells/add-checkpoint",
+      "about": "https://transparency.dev/witnesses/"
+    }
+  ]
 }
