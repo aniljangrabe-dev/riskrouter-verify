@@ -1,0 +1,451 @@
+{
+ "format": "riskrouter-regime-pack|1",
+ "id": "clinical-trials",
+ "version": 1,
+ "title": "Clinical trials: the trial master file, safety reports and serious breaches",
+ "regime": "EU Clinical Trials Regulation",
+ "summary": "What a sponsor or an investigator records so that the essential documents of a clinical trial, the safety reports exchanged during it and the archive kept after it can be shown later to be exactly what existed at the time, and any alteration to be traceable.",
+ "instruments": [
+  {
+   "id": "ctr",
+   "name": "Regulation (EU) No 536/2014 (Clinical Trials Regulation)",
+   "celex": "32014R0536",
+   "source": "https://eur-lex.europa.eu/eli/reg/2014/536/oj/eng"
+  }
+ ],
+ "articles": [
+  {
+   "id": "ctr-41-2",
+   "instrument": "ctr",
+   "ref": "Article 41(2)",
+   "asks": "The investigator records and documents all adverse events, unless the protocol provides differently, and reports serious adverse events to the sponsor without undue delay and not later than 24 hours after becoming aware of them, unless the protocol provides that no immediate reporting is required, with a follow-up report where relevant."
+  },
+  {
+   "id": "ctr-41-3",
+   "instrument": "ctr",
+   "ref": "Article 41(3)",
+   "asks": "The sponsor keeps detailed records of all adverse events reported to it by the investigator."
+  },
+  {
+   "id": "ctr-52-1",
+   "instrument": "ctr",
+   "ref": "Article 52(1)",
+   "asks": "The sponsor notifies the Member States concerned, through the EU portal, of a serious breach of the Regulation or of the protocol version applicable at the time, without undue delay and not later than seven days after becoming aware of it."
+  },
+  {
+   "id": "ctr-57",
+   "instrument": "ctr",
+   "ref": "Article 57",
+   "asks": "The sponsor and the investigator each keep a clinical trial master file that at all times contains the essential documents allowing the conduct of the trial and the quality of the data generated to be verified, readily available and directly accessible to the Member States on request."
+  },
+  {
+   "id": "ctr-58-1",
+   "instrument": "ctr",
+   "ref": "Article 58, first paragraph",
+   "asks": "Unless other Union law requires longer, the sponsor and the investigator archive the content of the clinical trial master file for at least 25 years after the end of the trial; the medical files of subjects are archived in accordance with national law."
+  },
+  {
+   "id": "ctr-58-5",
+   "instrument": "ctr",
+   "ref": "Article 58, fifth paragraph",
+   "asks": "The media used to archive the content of the clinical trial master file keep it complete and legible throughout the archiving period."
+  },
+  {
+   "id": "ctr-58-6",
+   "instrument": "ctr",
+   "ref": "Article 58, sixth paragraph",
+   "asks": "Any alteration to the content of the clinical trial master file is traceable."
+  }
+ ],
+ "kinds": [
+  {
+   "kind": "clinical.tmf-document",
+   "title": "Essential document filed in the trial master file",
+   "when": "Each time an essential document, or a new version of one, is filed: a protocol version, an informed consent form, a monitoring report, a signed agreement.",
+   "fields": [
+    {
+     "name": "trial_ref",
+     "type": "reference",
+     "required": true,
+     "description": "The trial's EU trial number, or your own reference for the trial.",
+     "evidences": [
+      "ctr-57"
+     ]
+    },
+    {
+     "name": "holder",
+     "type": "enum",
+     "values": [
+      "sponsor",
+      "investigator"
+     ],
+     "required": true,
+     "description": "Whose trial master file this is: the sponsor's or an investigator's.",
+     "evidences": [
+      "ctr-57"
+     ]
+    },
+    {
+     "name": "site_ref",
+     "type": "reference",
+     "required": false,
+     "description": "Your reference for the trial site, for an investigator's file.",
+     "evidences": [
+      "ctr-57"
+     ]
+    },
+    {
+     "name": "document_type",
+     "type": "string",
+     "max_length": 80,
+     "required": true,
+     "description": "What the document is, in your own taxonomy, such as protocol or monitoring-report.",
+     "evidences": [
+      "ctr-57"
+     ]
+    },
+    {
+     "name": "document_version",
+     "type": "string",
+     "max_length": 80,
+     "required": true,
+     "description": "The document's version, as written on it.",
+     "evidences": [
+      "ctr-57",
+      "ctr-58-6"
+     ]
+    },
+    {
+     "name": "document_digest",
+     "type": "digest",
+     "required": true,
+     "description": "SHA-256 of the document file exactly as filed.",
+     "evidences": [
+      "ctr-57",
+      "ctr-58-6"
+     ]
+    },
+    {
+     "name": "filed_at",
+     "type": "timestamp",
+     "required": true,
+     "description": "When it was filed, UTC.",
+     "evidences": [
+      "ctr-57"
+     ]
+    },
+    {
+     "name": "previous_version_record_id",
+     "type": "reference",
+     "required": false,
+     "description": "The record_id of the version this one replaces, so every alteration is traceable and the earlier version stays sealed.",
+     "evidences": [
+      "ctr-58-6"
+     ]
+    }
+   ],
+   "example": {
+    "pack": "clinical-trials",
+    "pack_version": 1,
+    "kind": "clinical.tmf-document",
+    "record_id": "tmf-2026-500123-protocol-v3",
+    "trial_ref": "2026-500123-41-00",
+    "holder": "sponsor",
+    "document_type": "protocol",
+    "document_version": "3.0",
+    "document_digest": "4f1c2b7e9a0d3c5e8b6a1f2d4c7e9b0a3d5f8c1e2b4a6d9f0c3e5b7a8d1f2c4e",
+    "filed_at": "2026-10-12T09:30:00Z",
+    "previous_version_record_id": "tmf-2026-500123-protocol-v2"
+   }
+  },
+  {
+   "kind": "clinical.tmf-archive",
+   "title": "Trial master file archived",
+   "when": "When the content of a trial master file is archived after the end of the trial, and again when it is moved to new media or transferred to a new owner.",
+   "fields": [
+    {
+     "name": "trial_ref",
+     "type": "reference",
+     "required": true,
+     "description": "The trial's EU trial number, or your own reference for the trial.",
+     "evidences": [
+      "ctr-58-1"
+     ]
+    },
+    {
+     "name": "holder",
+     "type": "enum",
+     "values": [
+      "sponsor",
+      "investigator"
+     ],
+     "required": true,
+     "description": "Whose trial master file this is: the sponsor's or an investigator's.",
+     "evidences": [
+      "ctr-58-1"
+     ]
+    },
+    {
+     "name": "trial_end_date",
+     "type": "date",
+     "required": true,
+     "description": "The end of the trial, from which the archiving period runs.",
+     "evidences": [
+      "ctr-58-1"
+     ]
+    },
+    {
+     "name": "archived_at",
+     "type": "timestamp",
+     "required": true,
+     "description": "When the archive was closed, UTC.",
+     "evidences": [
+      "ctr-58-1"
+     ]
+    },
+    {
+     "name": "manifest_digest",
+     "type": "digest",
+     "required": true,
+     "description": "SHA-256 of the archive's file list, one line per file with its own SHA-256, such as the list a folder seal produces.",
+     "evidences": [
+      "ctr-58-5",
+      "ctr-58-6"
+     ]
+    },
+    {
+     "name": "file_count",
+     "type": "integer",
+     "min": 0,
+     "required": true,
+     "description": "How many files the archive holds, so a file left out shows.",
+     "evidences": [
+      "ctr-58-5"
+     ]
+    },
+    {
+     "name": "reason",
+     "type": "enum",
+     "values": [
+      "archived",
+      "media-migration",
+      "ownership-transfer"
+     ],
+     "required": true,
+     "description": "Why this archive record was made.",
+     "evidences": [
+      "ctr-58-5",
+      "ctr-58-6"
+     ]
+    },
+    {
+     "name": "previous_archive_record_id",
+     "type": "reference",
+     "required": false,
+     "description": "The record_id of the archive record this one follows, after a migration or a transfer.",
+     "evidences": [
+      "ctr-58-6"
+     ]
+    },
+    {
+     "name": "retain_until",
+     "type": "date",
+     "required": false,
+     "description": "The date until which you have decided to keep the archive.",
+     "evidences": [
+      "ctr-58-1"
+     ]
+    }
+   ],
+   "example": {
+    "pack": "clinical-trials",
+    "pack_version": 1,
+    "kind": "clinical.tmf-archive",
+    "record_id": "tmf-2026-500123-archive",
+    "trial_ref": "2026-500123-41-00",
+    "holder": "sponsor",
+    "trial_end_date": "2026-09-30",
+    "archived_at": "2026-10-20T14:00:00Z",
+    "manifest_digest": "9b2d4f6a8c0e1d3f5a7c9e0b2d4f6a8c1e3a5c7e9b0d2f4a6c8e1b3d5f7a9c0e",
+    "file_count": 1842,
+    "reason": "archived",
+    "retain_until": "2051-12-31"
+   }
+  },
+  {
+   "kind": "clinical.adverse-event-report",
+   "title": "Adverse event report sent or received",
+   "when": "Each time an investigator sends, or a sponsor receives, a report of an adverse event: the initial report and each follow-up.",
+   "fields": [
+    {
+     "name": "trial_ref",
+     "type": "reference",
+     "required": true,
+     "description": "The trial's EU trial number, or your own reference for the trial.",
+     "evidences": [
+      "ctr-41-2",
+      "ctr-41-3"
+     ]
+    },
+    {
+     "name": "report_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your reference for the report; never the subject's name or a direct identifier.",
+     "evidences": [
+      "ctr-41-2",
+      "ctr-41-3"
+     ]
+    },
+    {
+     "name": "role",
+     "type": "enum",
+     "values": [
+      "investigator-sent",
+      "sponsor-received"
+     ],
+     "required": true,
+     "description": "Whether you sent the report as investigator or received it as sponsor.",
+     "evidences": [
+      "ctr-41-2",
+      "ctr-41-3"
+     ]
+    },
+    {
+     "name": "seriousness",
+     "type": "enum",
+     "values": [
+      "serious",
+      "non-serious"
+     ],
+     "required": true,
+     "description": "Whether the event was reported as serious.",
+     "evidences": [
+      "ctr-41-2"
+     ]
+    },
+    {
+     "name": "report_type",
+     "type": "enum",
+     "values": [
+      "initial",
+      "follow-up"
+     ],
+     "required": true,
+     "description": "Whether this is the first report or a follow-up.",
+     "evidences": [
+      "ctr-41-2"
+     ]
+    },
+    {
+     "name": "aware_at",
+     "type": "timestamp",
+     "required": false,
+     "description": "When the investigator became aware of the event, UTC; the 24-hour period runs from here.",
+     "evidences": [
+      "ctr-41-2"
+     ]
+    },
+    {
+     "name": "reported_at",
+     "type": "timestamp",
+     "required": true,
+     "description": "When the report was sent or received, UTC.",
+     "evidences": [
+      "ctr-41-2",
+      "ctr-41-3"
+     ]
+    },
+    {
+     "name": "report_digest",
+     "type": "digest",
+     "required": true,
+     "description": "SHA-256 of the report exactly as sent or received.",
+     "evidences": [
+      "ctr-41-2",
+      "ctr-41-3"
+     ]
+    }
+   ],
+   "example": {
+    "pack": "clinical-trials",
+    "pack_version": 1,
+    "kind": "clinical.adverse-event-report",
+    "record_id": "sae-2026-500123-017-initial",
+    "trial_ref": "2026-500123-41-00",
+    "report_ref": "sae-017",
+    "role": "investigator-sent",
+    "seriousness": "serious",
+    "report_type": "initial",
+    "aware_at": "2026-10-14T06:40:00Z",
+    "reported_at": "2026-10-14T15:10:00Z",
+    "report_digest": "2c4e6a8b0d1f3a5c7e9b2d4f6a8c0e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c"
+   }
+  },
+  {
+   "kind": "clinical.serious-breach-notification",
+   "title": "Serious breach notified",
+   "when": "When the sponsor notifies a serious breach through the EU portal.",
+   "fields": [
+    {
+     "name": "trial_ref",
+     "type": "reference",
+     "required": true,
+     "description": "The trial's EU trial number, or your own reference for the trial.",
+     "evidences": [
+      "ctr-52-1"
+     ]
+    },
+    {
+     "name": "breach_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your reference for the breach.",
+     "evidences": [
+      "ctr-52-1"
+     ]
+    },
+    {
+     "name": "aware_at",
+     "type": "timestamp",
+     "required": true,
+     "description": "When the sponsor became aware of the breach, UTC; the seven days run from here.",
+     "evidences": [
+      "ctr-52-1"
+     ]
+    },
+    {
+     "name": "notified_at",
+     "type": "timestamp",
+     "required": true,
+     "description": "When the notification was submitted, UTC.",
+     "evidences": [
+      "ctr-52-1"
+     ]
+    },
+    {
+     "name": "notification_digest",
+     "type": "digest",
+     "required": true,
+     "description": "SHA-256 of the notification exactly as submitted.",
+     "evidences": [
+      "ctr-52-1"
+     ]
+    }
+   ],
+   "example": {
+    "pack": "clinical-trials",
+    "pack_version": 1,
+    "kind": "clinical.serious-breach-notification",
+    "record_id": "sb-2026-500123-002",
+    "trial_ref": "2026-500123-41-00",
+    "breach_ref": "sb-002",
+    "aware_at": "2026-10-15T10:00:00Z",
+    "notified_at": "2026-10-19T16:20:00Z",
+    "notification_digest": "7e9a1c3e5b7d9f0a2c4e6b8d1f3a5c7e9b0d2f4a6c8e1a3c5e7b9d0f2a4c6e8b"
+   }
+  }
+ ],
+ "retention": "Article 58 sets at least 25 years after the end of the trial for the content of the clinical trial master file, unless other Union law requires longer; subjects' medical files follow national law. This pack does not decide your period.",
+ "notes": "Only digests are sent; the documents, the reports and anything about a subject stay with you. A new version is a new record that names the one it replaces, and the earlier one stays sealed, so an alteration shows as a chain of records rather than an overwrite. A record evidences what existed and when; whether a document is an essential document, and whether a deadline was met, is for the sponsor and the investigator to establish."
+}

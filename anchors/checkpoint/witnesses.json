@@ -24,6 +24,18 @@
       "vkey": "staging.witness.transparency.goog/ring-any-bells+2e1a8dc9+BG5JTpLc3FJtwzgh1Uv+Qelz9qeOH2bfWjS1s0s+y4rL",
       "url": "https://staging.witness.transparency.goog/ring-any-bells/add-checkpoint",
       "about": "https://transparency.dev/witnesses/"
+    },
+    {
+      "name": "witness.navigli.sunlight.geomys.org",
+      "vkey": "witness.navigli.sunlight.geomys.org+a3e00fe2+BNy/co4C1Hn1p+INwJrfUlgz7W55dSZReusH/GhUhJ/G",
+      "url": "https://witness.navigli.sunlight.geomys.org/add-checkpoint",
+      "about": "https://navigli.sunlight.geomys.org/"
+    },
+    {
+      "name": "krabbel.ct.ipng.ch",
+      "vkey": "krabbel.ct.ipng.ch+4b10dbd8+BO4sLOtnhktlqMCejDx9C5LDd+/xZxbmBb6BP9ZD2Def",
+      "url": "https://krabbel.ct.ipng.ch/add-checkpoint",
+      "about": "https://ipng.ch/s/ct/"
     }
   ]
 }

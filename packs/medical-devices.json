@@ -1,0 +1,321 @@
+{
+ "format": "riskrouter-regime-pack|1",
+ "id": "medical-devices",
+ "version": 1,
+ "title": "Medical devices: technical documentation and incident reports",
+ "regime": "EU Medical Device Regulations (MDR and IVDR)",
+ "summary": "What a manufacturer of a medical device or an in vitro diagnostic records so that each version of its technical documentation, its declaration of conformity and its certificates, and each serious incident or field safety corrective action report, can be shown later to be exactly what existed at the time.",
+ "instruments": [
+  {
+   "id": "mdr",
+   "name": "Regulation (EU) 2017/745 (Medical Device Regulation)",
+   "celex": "32017R0745",
+   "source": "https://eur-lex.europa.eu/eli/reg/2017/745/oj/eng"
+  },
+  {
+   "id": "ivdr",
+   "name": "Regulation (EU) 2017/746 (In Vitro Diagnostic Medical Devices Regulation)",
+   "celex": "32017R0746",
+   "source": "https://eur-lex.europa.eu/eli/reg/2017/746/oj/eng"
+  }
+ ],
+ "articles": [
+  {
+   "id": "mdr-10-4",
+   "instrument": "mdr",
+   "ref": "Article 10(4)",
+   "asks": "Manufacturers of devices other than custom-made devices draw up and keep up to date technical documentation that allows the conformity of the device to be assessed, including the elements set out in Annexes II and III."
+  },
+  {
+   "id": "mdr-10-8",
+   "instrument": "mdr",
+   "ref": "Article 10(8)",
+   "asks": "Manufacturers keep the technical documentation, the EU declaration of conformity and any relevant certificate, including amendments and supplements, available to the competent authorities for at least 10 years after the last device covered by the declaration has been placed on the market, and for implantable devices at least 15 years."
+  },
+  {
+   "id": "mdr-87-1",
+   "instrument": "mdr",
+   "ref": "Article 87(1)",
+   "asks": "Manufacturers report serious incidents and field safety corrective actions concerning devices made available on the Union market to the competent authorities, through the electronic system referred to in Article 92."
+  },
+  {
+   "id": "mdr-87-3",
+   "instrument": "mdr",
+   "ref": "Article 87(3)",
+   "asks": "A serious incident is reported immediately after the manufacturer has established, or finds reasonably possible, a causal relationship with its device, and not later than 15 days after becoming aware of it."
+  },
+  {
+   "id": "mdr-87-6",
+   "instrument": "mdr",
+   "ref": "Article 87(6)",
+   "asks": "Where necessary to report in time, the manufacturer may submit an initial report that is incomplete, followed by a complete report."
+  },
+  {
+   "id": "ivdr-10-4",
+   "instrument": "ivdr",
+   "ref": "Article 10(4)",
+   "asks": "Manufacturers draw up and keep up to date technical documentation that allows the conformity of the device to be assessed, including the elements set out in Annexes II and III."
+  },
+  {
+   "id": "ivdr-10-7",
+   "instrument": "ivdr",
+   "ref": "Article 10(7)",
+   "asks": "Manufacturers keep the technical documentation, the EU declaration of conformity and any relevant certificate, including amendments and supplements, available to the competent authorities for at least 10 years after the last device covered by the declaration has been placed on the market."
+  },
+  {
+   "id": "ivdr-82-1",
+   "instrument": "ivdr",
+   "ref": "Article 82(1)",
+   "asks": "Manufacturers report serious incidents and field safety corrective actions concerning devices made available on the Union market to the competent authorities, through the electronic system referred to in Article 87."
+  },
+  {
+   "id": "ivdr-82-3",
+   "instrument": "ivdr",
+   "ref": "Article 82(3)",
+   "asks": "A serious incident is reported immediately after the manufacturer has established, or finds reasonably possible, a causal relationship with its device, and not later than 15 days after becoming aware of it."
+  }
+ ],
+ "kinds": [
+  {
+   "kind": "device.technical-documentation",
+   "title": "Technical documentation, declaration or certificate version released",
+   "when": "Each time a version of the technical documentation, the EU declaration of conformity or a certificate, or an amendment or supplement to one, is released.",
+   "fields": [
+    {
+     "name": "device_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your reference for the device, or its Basic UDI-DI.",
+     "evidences": [
+      "mdr-10-4",
+      "ivdr-10-4"
+     ]
+    },
+    {
+     "name": "regulation",
+     "type": "enum",
+     "values": [
+      "mdr",
+      "ivdr"
+     ],
+     "required": true,
+     "description": "Which regulation the device falls under.",
+     "evidences": [
+      "mdr-10-8",
+      "ivdr-10-7"
+     ]
+    },
+    {
+     "name": "document_type",
+     "type": "enum",
+     "values": [
+      "technical-documentation",
+      "declaration-of-conformity",
+      "certificate"
+     ],
+     "required": true,
+     "description": "What was released.",
+     "evidences": [
+      "mdr-10-4",
+      "mdr-10-8",
+      "ivdr-10-4",
+      "ivdr-10-7"
+     ]
+    },
+    {
+     "name": "document_version",
+     "type": "string",
+     "max_length": 80,
+     "required": true,
+     "description": "The version, as written on it.",
+     "evidences": [
+      "mdr-10-4",
+      "ivdr-10-4"
+     ]
+    },
+    {
+     "name": "document_digest",
+     "type": "digest",
+     "required": true,
+     "description": "SHA-256 of the file exactly as released, or of the file list of a documentation folder, one line per file with its own SHA-256.",
+     "evidences": [
+      "mdr-10-4",
+      "mdr-10-8",
+      "ivdr-10-4",
+      "ivdr-10-7"
+     ]
+    },
+    {
+     "name": "released_at",
+     "type": "timestamp",
+     "required": true,
+     "description": "When it was released, UTC.",
+     "evidences": [
+      "mdr-10-4",
+      "ivdr-10-4"
+     ]
+    },
+    {
+     "name": "implantable",
+     "type": "boolean",
+     "required": false,
+     "description": "Whether the device is implantable, for which the MDR's period is at least 15 years.",
+     "evidences": [
+      "mdr-10-8"
+     ]
+    },
+    {
+     "name": "previous_version_record_id",
+     "type": "reference",
+     "required": false,
+     "description": "The record_id of the version this one replaces; the earlier version stays sealed.",
+     "evidences": [
+      "mdr-10-4",
+      "ivdr-10-4"
+     ]
+    },
+    {
+     "name": "retain_until",
+     "type": "date",
+     "required": false,
+     "description": "The date until which you have decided to keep it.",
+     "evidences": [
+      "mdr-10-8",
+      "ivdr-10-7"
+     ]
+    }
+   ],
+   "example": {
+    "pack": "medical-devices",
+    "pack_version": 1,
+    "kind": "device.technical-documentation",
+    "record_id": "td-infusion-pump-x2-v7",
+    "device_ref": "infusion-pump-x2",
+    "regulation": "mdr",
+    "document_type": "technical-documentation",
+    "document_version": "7",
+    "document_digest": "5d7f9b1c3e5a7c9e0b2d4f6a8c1e3b5d7f9a0c2e4b6d8f1a3c5e7b9d0f2a4c6e",
+    "released_at": "2026-10-08T12:00:00Z",
+    "implantable": false,
+    "previous_version_record_id": "td-infusion-pump-x2-v6"
+   }
+  },
+  {
+   "kind": "device.incident-report",
+   "title": "Serious incident or field safety corrective action reported",
+   "when": "Each time a report is submitted to the competent authority: the initial report, each follow-up and the final report.",
+   "fields": [
+    {
+     "name": "device_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your reference for the device, or its Basic UDI-DI.",
+     "evidences": [
+      "mdr-87-1",
+      "ivdr-82-1"
+     ]
+    },
+    {
+     "name": "regulation",
+     "type": "enum",
+     "values": [
+      "mdr",
+      "ivdr"
+     ],
+     "required": true,
+     "description": "Which regulation the device falls under.",
+     "evidences": [
+      "mdr-87-1",
+      "ivdr-82-1"
+     ]
+    },
+    {
+     "name": "report_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your reference for the report; never a patient's name or a direct identifier.",
+     "evidences": [
+      "mdr-87-1",
+      "ivdr-82-1"
+     ]
+    },
+    {
+     "name": "subject",
+     "type": "enum",
+     "values": [
+      "serious-incident",
+      "field-safety-corrective-action"
+     ],
+     "required": true,
+     "description": "What is reported.",
+     "evidences": [
+      "mdr-87-1",
+      "ivdr-82-1"
+     ]
+    },
+    {
+     "name": "report_type",
+     "type": "enum",
+     "values": [
+      "initial",
+      "follow-up",
+      "final"
+     ],
+     "required": true,
+     "description": "Which report this is.",
+     "evidences": [
+      "mdr-87-6"
+     ]
+    },
+    {
+     "name": "aware_at",
+     "type": "timestamp",
+     "required": true,
+     "description": "When you became aware of the incident, UTC; the reporting periods run from here.",
+     "evidences": [
+      "mdr-87-3",
+      "ivdr-82-3"
+     ]
+    },
+    {
+     "name": "submitted_at",
+     "type": "timestamp",
+     "required": true,
+     "description": "When the report was submitted, UTC.",
+     "evidences": [
+      "mdr-87-1",
+      "mdr-87-3",
+      "ivdr-82-1",
+      "ivdr-82-3"
+     ]
+    },
+    {
+     "name": "report_digest",
+     "type": "digest",
+     "required": true,
+     "description": "SHA-256 of the report exactly as submitted.",
+     "evidences": [
+      "mdr-87-1",
+      "ivdr-82-1"
+     ]
+    }
+   ],
+   "example": {
+    "pack": "medical-devices",
+    "pack_version": 1,
+    "kind": "device.incident-report",
+    "record_id": "mir-2026-0042-initial",
+    "device_ref": "infusion-pump-x2",
+    "regulation": "mdr",
+    "report_ref": "mir-2026-0042",
+    "subject": "serious-incident",
+    "report_type": "initial",
+    "aware_at": "2026-10-05T08:15:00Z",
+    "submitted_at": "2026-10-13T17:45:00Z",
+    "report_digest": "8a0c2e4b6d8f1a3c5e7b9d0f2a4c6e8b1d3f5a7c9e0b2d4f6a8c1e3a5c7e9b0d"
+   }
+  }
+ ],
+ "retention": "Article 10(8) of the MDR sets at least 10 years after the last device covered by the declaration of conformity has been placed on the market, and at least 15 years for implantable devices; Article 10(7) of the IVDR sets at least 10 years. This pack does not decide your period.",
+ "notes": "Only digests are sent; the documentation and the reports stay with you, as does anything about a patient. A new version is a new record that names the one it replaces, and the earlier one stays sealed. Whether a device is in scope, in which class, and whether software that is a medical device is also a high-risk AI system under Article 6(1) of the AI Act, is for the manufacturer to establish; for such a system's logs, use the ai-act pack beside this one."
+}
