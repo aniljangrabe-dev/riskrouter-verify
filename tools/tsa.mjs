@@ -17,7 +17,7 @@
  * ---------------------------------------------------------------------------
  * Why this lives in tools/ and not in the Worker
  *
- * Rule 1: no stranger's request can cause this call. It runs hourly from
+ * Rule 1: no stranger's request can cause this call. It runs every two hours from
  * .github/workflows/timestamp.yml, about heads that are already public; the
  * Worker contacts nothing new. Same basis as tools/timestamp.mjs.
  *
