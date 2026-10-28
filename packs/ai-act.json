@@ -4,7 +4,7 @@
  "version": 1,
  "title": "High-risk AI systems: logs, decisions and human oversight",
  "regime": "EU AI Act",
- "summary": "What a provider or deployer of a high-risk AI system records so that its logs, the decisions taken on the system's output, and the human oversight exercised over it can be shown later to be exactly what existed at the time.",
+ "summary": "What a provider or deployer of a high-risk AI system records so that its logs, the decisions taken on the system's output, and the human oversight exercised over it can be shown later to be exactly what existed at the time; and what a provider of a high-risk system or of a general-purpose model records of the data sets a model was trained, validated and tested on.",
  "instruments": [
   {
    "id": "ai-act",
@@ -61,6 +61,30 @@
    "instrument": "ai-act",
    "ref": "Article 50(2)",
    "asks": "Providers of AI systems, including general-purpose AI systems, that generate synthetic audio, image, video or text content ensure that the outputs are marked in a machine-readable format and detectable as artificially generated or manipulated, as far as technically feasible."
+  },
+  {
+   "id": "ai-10-2",
+   "instrument": "ai-act",
+   "ref": "Article 10(2)",
+   "asks": "Training, validation and testing data sets of high-risk AI systems are subject to data governance and management practices appropriate to the intended purpose, concerning in particular the data collection processes and the origin of the data (and, for personal data, the original purpose of the collection) and the data-preparation operations such as annotation, labelling, cleaning, updating, enrichment and aggregation."
+  },
+  {
+   "id": "ai-53-1-a",
+   "instrument": "ai-act",
+   "ref": "Article 53(1)(a)",
+   "asks": "Providers of general-purpose AI models draw up and keep up to date the technical documentation of the model, including its training and testing process and the results of its evaluation, to provide it on request to the AI Office and the national competent authorities."
+  },
+  {
+   "id": "ai-53-1-c",
+   "instrument": "ai-act",
+   "ref": "Article 53(1)(c)",
+   "asks": "Providers of general-purpose AI models put in place a policy to comply with Union law on copyright and related rights, in particular to identify and comply with a reservation of rights expressed under Article 4(3) of Directive (EU) 2019/790."
+  },
+  {
+   "id": "ai-53-1-d",
+   "instrument": "ai-act",
+   "ref": "Article 53(1)(d)",
+   "asks": "Providers of general-purpose AI models draw up and make publicly available a sufficiently detailed summary about the content used for training the model, according to a template provided by the AI Office."
   }
  ],
  "kinds": [
@@ -600,6 +624,141 @@
     "marking": "c2pa-manifest",
     "marking_digest": "a8c0e2b4d6f8a0c2e4b6d8f0a2c4e6b8d0f2a4c6e8b0d2f4a6c8e0b2d4f6a8c0",
     "generated_at": "2026-10-07T10:15:03Z"
+   }
+  },
+  {
+   "kind": "ai.training-data",
+   "title": "Training, validation or test data set fixed",
+   "when": "Each time a data set used to train, validate or test a model is fixed: sealed by the fingerprint of its manifest (every file and its SHA-256), with the records of where the data came from and how it was prepared, so a later question about which data a model learned from has one answer.",
+   "fields": [
+    {
+     "name": "dataset_ref",
+     "type": "reference",
+     "required": true,
+     "description": "Your reference for the data set and its version.",
+     "evidences": [
+      "ai-10-2",
+      "ai-53-1-a"
+     ]
+    },
+    {
+     "name": "role",
+     "type": "enum",
+     "values": [
+      "high-risk-provider",
+      "gpai-provider"
+     ],
+     "required": true,
+     "description": "Whether you keep this as the provider of a high-risk AI system or of a general-purpose AI model.",
+     "evidences": [
+      "ai-10-2",
+      "ai-53-1-a"
+     ]
+    },
+    {
+     "name": "use",
+     "type": "enum",
+     "values": [
+      "training",
+      "validation",
+      "testing"
+     ],
+     "required": true,
+     "description": "What the data set is used for.",
+     "evidences": [
+      "ai-10-2"
+     ]
+    },
+    {
+     "name": "manifest_digest",
+     "type": "digest",
+     "required": true,
+     "description": "SHA-256 of the manifest listing every file of the data set with its own SHA-256, exactly as stored.",
+     "evidences": [
+      "ai-10-2",
+      "ai-53-1-a"
+     ]
+    },
+    {
+     "name": "item_count",
+     "type": "integer",
+     "min": 0,
+     "required": true,
+     "description": "How many items the data set holds, so a later, smaller or larger set is caught.",
+     "evidences": [
+      "ai-10-2"
+     ]
+    },
+    {
+     "name": "origin_record_digest",
+     "type": "digest",
+     "required": true,
+     "description": "SHA-256 of your record of the collection processes and the origin of the data.",
+     "evidences": [
+      "ai-10-2"
+     ]
+    },
+    {
+     "name": "preparation_record_digest",
+     "type": "digest",
+     "required": false,
+     "description": "SHA-256 of your record of the preparation operations: annotation, labelling, cleaning, updating, enrichment, aggregation.",
+     "evidences": [
+      "ai-10-2"
+     ]
+    },
+    {
+     "name": "copyright_check_digest",
+     "type": "digest",
+     "required": false,
+     "description": "SHA-256 of your record of how reservations of rights were identified and honoured for this data set.",
+     "evidences": [
+      "ai-53-1-c"
+     ]
+    },
+    {
+     "name": "public_summary_digest",
+     "type": "digest",
+     "required": false,
+     "description": "SHA-256 of the published summary of training content, exactly as published.",
+     "evidences": [
+      "ai-53-1-d"
+     ]
+    },
+    {
+     "name": "fixed_at",
+     "type": "timestamp",
+     "required": true,
+     "description": "When the data set was fixed in this form, UTC.",
+     "evidences": [
+      "ai-10-2",
+      "ai-53-1-a"
+     ]
+    },
+    {
+     "name": "previous_record_id",
+     "type": "reference",
+     "required": false,
+     "description": "The record_id of the training-data record for the version this one replaces.",
+     "evidences": [
+      "ai-10-2"
+     ]
+    }
+   ],
+   "example": {
+    "pack": "ai-act",
+    "pack_version": 1,
+    "kind": "ai.training-data",
+    "record_id": "data-credit-train-v7",
+    "dataset_ref": "credit-train-v7",
+    "role": "high-risk-provider",
+    "use": "training",
+    "manifest_digest": "2c4e6b8d0f2a4c6e8b0d2f4a6c8e0b2d4f6a8c0e2b4d6f8a0c2e4b6d8f0a2c4e",
+    "item_count": 184220,
+    "origin_record_digest": "8d0f2a4c6e8b0d2f4a6c8e0b2d4f6a8c0e2b4d6f8a0c2e4b6d8f0a2c4e6b8d0f",
+    "preparation_record_digest": "a4c6e8b0d2f4a6c8e0b2d4f6a8c0e2b4d6f8a0c2e4b6d8f0a2c4e6b8d0f2a4c6",
+    "fixed_at": "2026-10-20T09:00:00Z",
+    "previous_record_id": "data-credit-train-v6"
    }
   }
  ],
