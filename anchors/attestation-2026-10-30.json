@@ -1,0 +1,19 @@
+{
+  "ok": true,
+  "attestation": {
+    "as_of": "2026-10-30T14:11:23Z",
+    "entries": 59,
+    "genesis": "0000000000000000000000000000000000000000000000000000000000000000",
+    "algorithm": "sha256",
+    "canonical": "sha256( chain_index|id|created_at(YYYY-MM-DDTHH:MM:SS.ffffffZ)|vertical|components(key=bool sorted by key, comma separated)|premium(0.00)|status|matrix_version|distributor_id|prev_hash )",
+    "head_hash": "ebdf236eab6bb688a342f2c5c8f6913f5cd368b2fd4aa8bad5448e707b6e8b4e"
+  },
+  "signature": {
+    "algorithm": "ECDSA_P256_SHA256",
+    "key_id": "dd4b4b394c95586a",
+    "signed_payload": "riskrouter-ledger-attestation|v1|2026-10-30T14:11:23Z|59|ebdf236eab6bb688a342f2c5c8f6913f5cd368b2fd4aa8bad5448e707b6e8b4e",
+    "signature": "8edBlOzRsZp4BfibkETlgQqT2B3amxFyGnIjlL7eJQ/ng6FivfCUAxsFlkTUSyTxOvSwXWKi1EJQ54iQyLB2Ww=="
+  },
+  "how_to_verify": "Save this whole response. Re-read later: every entry up to that point must still produce head_hash, and the signature proves we published it. See /verify.",
+  "generated_at": "2026-10-30T14:11:23.500Z"
+}
